@@ -1,0 +1,5208 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+
+<meta
+  name="viewport"
+  content="width=device-width, initial-scale=1.0, viewport-fit=cover"
+>
+
+<title>OPERA TYPE</title>
+
+<style>
+
+/* =====================================================
+   BASIC
+===================================================== */
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+}
+
+body {
+  height: 100dvh;
+  background: #17090b;
+  color: white;
+
+  font-family:
+    "Pretendard",
+    "Noto Sans KR",
+    Arial,
+    sans-serif;
+}
+
+
+/* =====================================================
+   APP
+===================================================== */
+
+.app {
+  width: 100%;
+  height: 100dvh;
+
+  max-width: 950px;
+
+  margin: 0 auto;
+
+  padding:
+    max(4px, env(safe-area-inset-top))
+    6px
+    max(4px, env(safe-area-inset-bottom));
+
+  display: flex;
+  flex-direction: column;
+
+  overflow: hidden;
+}
+
+
+/* =====================================================
+   TOP UI
+===================================================== */
+
+.top-ui {
+  flex: 0 0 auto;
+
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+
+  gap: 6px;
+  margin-bottom: 6px;
+}
+
+.panel {
+  min-height: 47px;
+
+  padding: 5px;
+
+  border-radius: 10px;
+
+  text-align: center;
+
+  background: rgba(0,0,0,0.62);
+
+  border:
+    1px solid
+    rgba(255,215,140,0.32);
+}
+
+.panel .label {
+  font-size: 10px;
+  opacity: 0.72;
+}
+
+.panel .value {
+  margin-top: 2px;
+
+  font-size: 19px;
+  font-weight: 900;
+}
+
+
+/* =====================================================
+   GAME STAGE
+===================================================== */
+
+.game-stage {
+  position: relative;
+
+  flex: 1 1 auto;
+
+  min-height: 0;
+  width: 100%;
+
+  overflow: hidden;
+
+  border-radius: 13px;
+
+  border:
+    2px solid
+    rgba(255,210,125,0.45);
+
+  background: #080405;
+
+  box-shadow:
+    0 8px 25px
+    rgba(0,0,0,0.5);
+}
+
+
+/* =====================================================
+   4:3 무대 좌표판
+
+   ★ 중요
+   JavaScript가 실제 크기를 계산함.
+
+   배경/오케스트라/성악가는
+   모두 이 좌표판 안에 들어감.
+===================================================== */
+
+.stage-art {
+  position: absolute;
+
+  left: 50%;
+  top: 50%;
+
+  transform:
+    translate(-50%, -50%);
+
+  overflow: hidden;
+
+  z-index: 1;
+
+  pointer-events: none;
+
+  /*
+    아래 값들만 수정하면
+    무대 위 캐릭터 위치를 조절할 수 있음
+  */
+
+  --orchestra-left: 50%;
+  --orchestra-top: 40%;
+  --orchestra-width: 60%;
+
+  --singer-left: 35%;
+  --singer-top: 37%;
+  --singer-width: 23%;
+}
+
+
+/* =====================================================
+   BACKGROUND
+
+   4:3 배경과 stage-art가 같은 비율이므로
+   왜곡이나 cover 잘림이 없음.
+===================================================== */
+
+.stage-bg {
+  position: absolute;
+
+  inset: 0;
+
+  width: 100%;
+  height: 100%;
+
+  object-fit: fill;
+
+  z-index: 1;
+
+  user-select: none;
+
+  -webkit-user-drag: none;
+}
+
+
+/* =====================================================
+   ORCHESTRA POSITION
+
+   ★ 배경 이미지 좌표 기준
+===================================================== */
+
+.orchestra-anchor {
+  position: absolute;
+
+  left: var(--orchestra-left);
+  top: var(--orchestra-top);
+
+  width: var(--orchestra-width);
+
+  transform:
+    translateX(-50%);
+
+  z-index: 2;
+
+  transform-origin:
+    center bottom;
+}
+
+
+/*
+   실제 움직임은 자식 이미지에 적용.
+   따라서 무대 좌표 자체는 흔들리지 않음.
+*/
+
+.orchestra {
+  display: block;
+
+  width: 100%;
+  height: auto;
+
+  transform-origin:
+    center bottom;
+
+  animation:
+    orchestraPlaying
+    2.0s
+    ease-in-out
+    infinite;
+
+  user-select: none;
+
+  -webkit-user-drag: none;
+}
+
+
+@keyframes orchestraPlaying {
+
+  0%,
+  100% {
+    transform:
+      translateY(0)
+      rotate(0deg);
+  }
+
+  25% {
+    transform:
+      translateY(-1px)
+      rotate(-0.05deg);
+  }
+
+  50% {
+    transform:
+      translateY(-2px)
+      rotate(0deg);
+  }
+
+  75% {
+    transform:
+      translateY(-1px)
+      rotate(0.05deg);
+  }
+
+}
+
+
+/* =====================================================
+   SINGER POSITION
+
+   역시 배경 좌표 기준
+===================================================== */
+
+.singer-anchor {
+  position: absolute;
+
+  left: var(--singer-left);
+  top: var(--singer-top);
+
+  width: var(--singer-width);
+
+  transform:
+    translateX(-50%);
+
+  z-index: 3;
+
+  transform-origin:
+    center bottom;
+}
+
+
+.singer-motion {
+  width: 100%;
+
+  transform-origin:
+    center bottom;
+}
+
+
+.singer-image {
+  display: block;
+
+  width: 100%;
+  height: auto;
+
+  object-fit: contain;
+
+  object-position:
+    center bottom;
+
+  user-select: none;
+
+  -webkit-user-drag: none;
+}
+
+
+
+/* =====================================================
+   SINGER LYRIC BUBBLE
+
+   정답 입력 시 성악가 머리 오른쪽에
+   방금 부른 가사를 말풍선처럼 표시한다.
+
+   PERFECT / GOOD / PASS 판정에 따라
+   색상만 달라지고 위치/애니메이션은 동일하다.
+===================================================== */
+
+.singer-bubble {
+  position: absolute;
+
+  /*
+    singer-anchor 기준 좌표.
+    성악가 머리 오른쪽 영역.
+  */
+  left: 78%;
+  top: 4%;
+
+  z-index: 8;
+
+  width: max-content;
+  max-width:
+    min(
+      270px,
+      38vw
+    );
+
+  padding:
+    9px 13px;
+
+  border:
+    2px solid
+    var(--bubble-border, #ffd65f);
+
+  border-radius:
+    15px 15px 15px 5px;
+
+  background:
+    var(--bubble-bg, rgba(255,248,220,0.96));
+
+  color:
+    var(--bubble-text, #321b05);
+
+  box-shadow:
+    0 6px 16px
+    rgba(0,0,0,0.32),
+    0 0 18px
+    var(--bubble-glow, rgba(255,214,95,0.35));
+
+  font-size:
+    clamp(
+      11px,
+      2.1vw,
+      18px
+    );
+
+  font-weight: 1000;
+
+  line-height: 1.25;
+
+  text-align: center;
+
+  white-space: normal;
+
+  word-break: keep-all;
+
+  opacity: 0;
+
+  pointer-events: none;
+
+  transform:
+    translate(
+      4px,
+      9px
+    )
+    scale(0.72);
+
+  transform-origin:
+    left bottom;
+}
+
+
+/*
+  말풍선 꼬리.
+  오른쪽에 있는 말풍선이
+  성악가 쪽(왼쪽)을 가리킨다.
+*/
+.singer-bubble::after {
+  content: "";
+
+  position: absolute;
+
+  left: -7px;
+  top: 58%;
+
+  width: 12px;
+  height: 12px;
+
+  background:
+    var(--bubble-bg, rgba(255,248,220,0.96));
+
+  border-left:
+    2px solid
+    var(--bubble-border, #ffd65f);
+
+  border-bottom:
+    2px solid
+    var(--bubble-border, #ffd65f);
+
+  transform:
+    translateY(-50%)
+    rotate(45deg);
+}
+
+
+.singer-bubble.show {
+  animation:
+    singerBubblePop
+    2.7s
+    ease-out
+    forwards;
+}
+
+
+/* PERFECT : 금색 */
+.singer-bubble.grade-perfect {
+  --bubble-bg:
+    rgba(255,249,213,0.97);
+
+  --bubble-border:
+    #ffd64e;
+
+  --bubble-text:
+    #5c3b00;
+
+  --bubble-glow:
+    rgba(255,214,78,0.62);
+}
+
+
+/* GOOD : 초록 */
+.singer-bubble.grade-good {
+  --bubble-bg:
+    rgba(228,255,231,0.97);
+
+  --bubble-border:
+    #6de982;
+
+  --bubble-text:
+    #164d25;
+
+  --bubble-glow:
+    rgba(90,235,117,0.48);
+}
+
+
+/* PASS : 파랑 */
+.singer-bubble.grade-pass {
+  --bubble-bg:
+    rgba(226,247,255,0.97);
+
+  --bubble-border:
+    #66cfff;
+
+  --bubble-text:
+    #174b65;
+
+  --bubble-glow:
+    rgba(80,198,255,0.50);
+}
+
+
+@keyframes singerBubblePop {
+
+  0% {
+    opacity: 0;
+
+    transform:
+      translate(
+        4px,
+        10px
+      )
+      scale(0.68);
+  }
+
+  16% {
+    opacity: 1;
+
+    transform:
+      translate(
+        8px,
+        0
+      )
+      scale(1.08);
+  }
+
+  32% {
+    opacity: 1;
+
+    transform:
+      translate(
+        8px,
+        0
+      )
+      scale(0.98);
+  }
+
+  72% {
+    opacity: 1;
+
+    transform:
+      translate(
+        8px,
+        -2px
+      )
+      scale(1);
+  }
+
+  100% {
+    opacity: 0;
+
+    transform:
+      translate(
+        12px,
+        -12px
+      )
+      scale(0.94);
+  }
+
+}
+
+
+/*
+  아주 작은 모바일 화면에서는
+  말풍선 크기와 폭을 조금 줄인다.
+*/
+@media
+(
+  max-width: 480px
+) {
+
+  .singer-bubble {
+    left: 76%;
+    top: 3%;
+
+    max-width:
+      min(
+        185px,
+        42vw
+      );
+
+    padding:
+      7px 9px;
+
+    border-radius:
+      12px 12px 12px 4px;
+
+    font-size:
+      clamp(
+        10px,
+        3vw,
+        14px
+      );
+  }
+
+}
+
+
+
+/* =====================================================
+   SINGER NORMAL
+===================================================== */
+
+.singer-motion.state-normal {
+  animation:
+    singerNormal
+    0.95s
+    ease-in-out
+    infinite;
+}
+
+
+@keyframes singerNormal {
+
+  0%,
+  100% {
+    transform:
+      translateY(0)
+      rotate(0deg)
+      scale(1);
+  }
+
+  25% {
+    transform:
+      translateY(-2px)
+      rotate(-0.5deg)
+      scale(1.005);
+  }
+
+  50% {
+    transform:
+      translateY(-5px)
+      rotate(0.5deg)
+      scale(1.015);
+  }
+
+  75% {
+    transform:
+      translateY(-2px)
+      rotate(-0.4deg)
+      scale(1.005);
+  }
+
+}
+
+
+/* =====================================================
+   PERFECT
+===================================================== */
+
+.singer-motion.state-perfect {
+  animation:
+    singerPerfect
+    0.42s
+    ease-in-out
+    infinite;
+}
+
+
+@keyframes singerPerfect {
+
+  0%,
+  100% {
+    transform:
+      translateY(0)
+      rotate(0deg)
+      scale(1.02);
+  }
+
+  25% {
+    transform:
+      translateY(-8px)
+      rotate(-2deg)
+      scale(1.06);
+  }
+
+  50% {
+    transform:
+      translateY(-12px)
+      rotate(2deg)
+      scale(1.09);
+  }
+
+  75% {
+    transform:
+      translateY(-6px)
+      rotate(-1deg)
+      scale(1.05);
+  }
+
+}
+
+
+/* =====================================================
+   GOOD
+===================================================== */
+
+.singer-motion.state-good {
+  animation:
+    singerGood
+    0.58s
+    ease-in-out
+    infinite;
+}
+
+
+@keyframes singerGood {
+
+  0%,
+  100% {
+    transform:
+      translateY(0)
+      scale(1);
+  }
+
+  50% {
+    transform:
+      translateY(-7px)
+      rotate(1deg)
+      scale(1.04);
+  }
+
+}
+
+
+/* =====================================================
+   PASS
+===================================================== */
+
+.singer-motion.state-pass {
+  animation:
+    singerPass
+    0.70s
+    ease-in-out
+    infinite;
+}
+
+
+@keyframes singerPass {
+
+  0%,
+  100% {
+    transform:
+      translateY(0)
+      rotate(0deg)
+      scale(0.995);
+  }
+
+  50% {
+    transform:
+      translateY(-3px)
+      rotate(-1.5deg)
+      scale(1.01);
+  }
+
+}
+
+
+/* =====================================================
+   MISS
+===================================================== */
+
+.singer-motion.state-miss {
+  animation:
+    singerMiss
+    0.23s
+    ease-in-out
+    infinite;
+}
+
+
+@keyframes singerMiss {
+
+  0% {
+    transform:
+      translateY(4px)
+      rotate(-2deg)
+      scale(0.97);
+  }
+
+  50% {
+    transform:
+      translateY(6px)
+      rotate(2deg)
+      scale(0.965);
+  }
+
+  100% {
+    transform:
+      translateY(4px)
+      rotate(-2deg)
+      scale(0.97);
+  }
+
+}
+
+
+/* =====================================================
+   FALLING LYRICS
+===================================================== */
+
+.falling-layer {
+  position: absolute;
+
+  inset: 0;
+
+  z-index: 6;
+
+  overflow: hidden;
+
+  pointer-events: none;
+}
+
+
+.word {
+  position: absolute;
+
+  top: 0;
+  left: 0;
+
+  padding:
+    8px 13px;
+
+  border-radius: 12px;
+
+  white-space: nowrap;
+
+  font-size:
+    clamp(
+      15px,
+      2.7vw,
+      23px
+    );
+
+  font-weight: 900;
+
+  color: #fff9e8;
+
+  background:
+    rgba(47,11,17,0.90);
+
+  border:
+    2px solid
+    rgba(255,255,255,0.22);
+
+  box-shadow:
+    0 4px 12px
+    rgba(0,0,0,0.4);
+
+  text-shadow:
+    0 2px 4px
+    rgba(0,0,0,0.9);
+}
+
+
+.word.target {
+  opacity: 1;
+
+  border-color:
+    #ffd65f;
+
+  box-shadow:
+    0 0 0 2px
+    rgba(255,215,95,0.20),
+    0 0 20px
+    rgba(255,200,50,0.7);
+}
+
+
+.word.waiting {
+  opacity: 0.72;
+}
+
+
+/* =====================================================
+   LIMIT LINE
+===================================================== */
+
+.miss-line {
+  position: absolute;
+
+  left: 0;
+  right: 0;
+
+  bottom: 67px;
+
+  z-index: 7;
+
+  border-top:
+    3px dashed
+    rgba(255,203,95,0.90);
+
+  pointer-events: none;
+}
+
+
+.miss-line-label {
+  position: absolute;
+
+  right: 7px;
+  top: -16px;
+
+  padding:
+    2px 6px;
+
+  border-radius: 5px;
+
+  background:
+    rgba(0,0,0,0.65);
+
+  color:
+    #ffdc8c;
+
+  font-size: 9px;
+}
+
+
+/* =====================================================
+   전주 / 간주 / 합창
+===================================================== */
+
+.phase-layer {
+  position: absolute;
+
+  left: 50%;
+
+  /*
+    PERFECT / GOOD 등의 판정 텍스트와 같은
+    상단 커튼 영역에 안내 문구를 표시한다.
+  */
+  top: 24%;
+
+  z-index: 12;
+
+  width: 94%;
+
+  transform:
+    translate(-50%, -50%);
+
+  text-align: center;
+
+  pointer-events: none;
+
+  opacity: 1;
+
+  transition:
+    opacity 0.25s;
+}
+
+
+.phase-layer.hidden {
+  opacity: 0;
+}
+
+
+.phase-text {
+  font-size:
+    clamp(
+      24px,
+      5.5vw,
+      50px
+    );
+
+  font-weight: 1000;
+
+  font-style: italic;
+
+  line-height: 1.05;
+
+  letter-spacing: -2px;
+
+  color:
+    #ffe5a0;
+
+  text-shadow:
+    0 5px 0 #654210,
+    0 0 14px rgba(255,210,100,0.85),
+    0 8px 25px rgba(0,0,0,0.9);
+
+  animation:
+    phasePulse
+    1.6s
+    ease-in-out
+    infinite;
+}
+
+
+.phase-text.long {
+  font-size:
+    clamp(
+      18px,
+      4.2vw,
+      36px
+    );
+}
+
+
+@keyframes phasePulse {
+
+  0%,
+  100% {
+    transform:
+      scale(1);
+
+    opacity: 0.8;
+  }
+
+  50% {
+    transform:
+      scale(1.05);
+
+    opacity: 1;
+  }
+
+}
+
+
+
+/* =====================================================
+   JUDGEMENT
+===================================================== */
+
+.judgement-layer {
+  position: absolute;
+
+  left: 50%;
+
+  /*
+    판정 텍스트를 성악가 얼굴 위가 아니라
+    무대 상단 커튼의 빈 공간에 표시한다.
+  */
+  top: 24%;
+
+  z-index: 20;
+
+  width: 100%;
+
+  text-align: center;
+
+  opacity: 0;
+
+  pointer-events: none;
+
+  transform:
+    translate(-50%, -50%)
+    scale(0.5);
+}
+
+
+.judgement-layer.show {
+  animation:
+    judgementPop
+    0.68s
+    ease-out;
+}
+
+
+.judgement-main {
+  font-size:
+    clamp(
+      30px,
+      7.5vw,
+      70px
+    );
+
+  font-weight: 1000;
+
+  font-style: italic;
+
+  line-height: 0.9;
+
+  letter-spacing: -3px;
+}
+
+
+.judgement-sub {
+  margin-top: 6px;
+
+  font-size:
+    clamp(
+      10px,
+      2.2vw,
+      17px
+    );
+
+  font-weight: 900;
+
+  color: white;
+
+  text-shadow:
+    0 2px 5px black;
+}
+
+
+.judgement-layer.perfect
+.judgement-main {
+  color: #ffe86c;
+
+  text-shadow:
+    0 5px 0 #9b6100,
+    0 0 15px #ffd62d,
+    0 0 40px rgba(255,206,38,0.95);
+}
+
+
+.judgement-layer.good
+.judgement-main {
+  color: #87ff9a;
+
+  text-shadow:
+    0 5px 0 #276f37,
+    0 0 24px rgba(73,255,104,0.9);
+}
+
+
+.judgement-layer.pass
+.judgement-main {
+  color: #78d9ff;
+
+  text-shadow:
+    0 5px 0 #1d6184,
+    0 0 24px rgba(60,196,255,0.9);
+}
+
+
+.judgement-layer.miss
+.judgement-main {
+  color: #ff6868;
+
+  text-shadow:
+    0 5px 0 #881b1b,
+    0 0 26px rgba(255,50,50,0.95);
+}
+
+
+@keyframes judgementPop {
+
+  0% {
+    opacity: 0;
+
+    transform:
+      translate(-50%, -50%)
+      scale(0.25);
+  }
+
+  18% {
+    opacity: 1;
+
+    transform:
+      translate(-50%, -50%)
+      scale(1.25);
+  }
+
+  35% {
+    opacity: 1;
+
+    transform:
+      translate(-50%, -50%)
+      scale(0.97);
+  }
+
+  55% {
+    opacity: 1;
+
+    transform:
+      translate(-50%, -50%)
+      scale(1);
+  }
+
+  82% {
+    opacity: 1;
+  }
+
+  100% {
+    opacity: 0;
+
+    transform:
+      translate(-50%, -58%)
+      scale(1.15);
+  }
+
+}
+
+
+/* =====================================================
+   INPUT
+===================================================== */
+
+.bottom-overlay {
+  position: absolute;
+
+  left: 0;
+  right: 0;
+  bottom: 0;
+
+  z-index: 30;
+
+  padding: 8px;
+
+  background:
+    linear-gradient(
+      to top,
+      rgba(10,2,4,0.98),
+      rgba(10,2,4,0.70),
+      rgba(10,2,4,0)
+    );
+}
+
+
+.input-row {
+  display: flex;
+  gap: 5px;
+}
+
+
+.typing-input {
+  flex: 1;
+
+  min-width: 0;
+
+  height: 46px;
+
+  padding:
+    0 13px;
+
+  border:
+    2px solid
+    rgba(255,211,120,0.65);
+
+  border-radius: 10px;
+
+  background:
+    rgba(255,255,255,0.97);
+
+  color: #261416;
+
+  font-size: 16px;
+  font-weight: 800;
+
+  outline: none;
+}
+
+
+.typing-input:focus {
+  border-color:
+    #ffc650;
+
+  box-shadow:
+    0 0 0 3px
+    rgba(255,195,72,0.20);
+}
+
+
+.submit-btn {
+  width: 76px;
+  height: 46px;
+
+  border: 0;
+
+  border-radius: 10px;
+
+  background:
+    #ffca61;
+
+  color: #331700;
+
+  font-size: 15px;
+  font-weight: 900;
+
+  cursor: pointer;
+
+  touch-action: manipulation;
+}
+
+
+/* =====================================================
+   START
+===================================================== */
+
+.start-overlay {
+  position: absolute;
+
+  inset: 0;
+
+  z-index: 50;
+
+  display: flex;
+
+  justify-content: center;
+  align-items: center;
+
+  padding: 15px;
+
+  background:
+    rgba(15,3,6,0.80);
+}
+
+
+.start-overlay.hidden {
+  display: none;
+}
+
+
+.start-card {
+  width:
+    min(
+      94%,
+      760px
+    );
+
+  max-height:
+    calc(100% - 18px);
+
+  overflow-y:
+    auto;
+
+  padding:
+    24px 18px;
+
+  border-radius: 18px;
+
+  text-align: center;
+
+  background:
+    rgba(47,13,19,0.97);
+
+  border:
+    2px solid
+    rgba(255,215,130,0.55);
+
+  box-shadow:
+    0 15px 40px
+    rgba(0,0,0,0.6);
+}
+
+
+.start-card h1 {
+  margin:
+    0 0 9px;
+
+  color: #ffd164;
+
+  font-size:
+    clamp(
+      28px,
+      7vw,
+      44px
+    );
+
+  line-height: 1;
+}
+
+
+.start-card p {
+  margin: 7px 0;
+
+  font-size: 13px;
+
+  line-height: 1.5;
+}
+
+
+.start-button {
+  width: 100%;
+
+  min-height: 55px;
+
+  margin-top: 15px;
+
+  border: 0;
+
+  border-radius: 12px;
+
+  background:
+    #ffca61;
+
+  color:
+    #321600;
+
+  font-size: 18px;
+
+  font-weight: 1000;
+
+  cursor: pointer;
+
+  touch-action: manipulation;
+}
+
+
+
+
+/* =====================================================
+   START MENU / CHARACTER / SONG SELECT
+===================================================== */
+
+.menu-content { width: 100%; }
+.menu-view { width: 100%; }
+.menu-view.home-view { max-width: 420px; margin: 0 auto; }
+.menu-kicker { margin-bottom: 7px; font-size: 11px; font-weight: 900; letter-spacing: .18em; color: rgba(255,220,150,.72); }
+.menu-title { margin: 0; color:#ffd164; font-size:clamp(27px,7vw,44px); line-height:1.05; font-weight:1000; }
+.menu-subtitle { margin:10px auto 0; max-width:560px; color:rgba(255,255,255,.82); font-size:13px; line-height:1.55; }
+.menu-section-title { margin:0 0 14px; color:#ffe6a5; font-size:clamp(22px,5vw,34px); font-weight:1000; }
+.menu-selection-info { display:inline-flex; align-items:center; gap:6px; margin:0 0 12px; padding:5px 9px; border-radius:999px; background:rgba(255,204,100,.13); border:1px solid rgba(255,213,125,.28); color:#ffe3a1; font-size:11px; font-weight:900; }
+.character-grid { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:10px; }
+.character-card { position:relative; min-width:0; padding:10px 7px 8px; border:2px solid rgba(255,215,140,.28); border-radius:14px; background:rgba(19,7,10,.78); color:white; cursor:pointer; overflow:hidden; transition:transform .15s ease,border-color .15s ease,box-shadow .15s ease,background .15s ease; touch-action:manipulation; }
+.character-card:hover,.character-card:focus-visible { transform:translateY(-3px); border-color:#ffd46a; background:rgba(61,25,30,.95); box-shadow:0 8px 22px rgba(0,0,0,.36),0 0 18px rgba(255,205,90,.20); outline:none; }
+.character-card.selected { border-color:#ffd65f; box-shadow:0 0 0 2px rgba(255,214,95,.16),0 0 18px rgba(255,205,90,.22); }
+.character-preview { width:100%; aspect-ratio:3/4; display:flex; align-items:flex-end; justify-content:center; overflow:hidden; }
+.character-preview img { width:100%; height:100%; object-fit:contain; object-position:center bottom; filter:drop-shadow(0 6px 5px rgba(0,0,0,.35)); }
+.character-name { margin-top:5px; font-size:clamp(13px,3vw,18px); font-weight:1000; color:#fff1ca; }
+.song-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:8px; }
+.song-card { position:relative; min-width:0; padding:11px 12px; border:2px solid rgba(255,215,140,.26); border-radius:12px; background:rgba(19,7,10,.80); text-align:left; color:white; cursor:pointer; transition:transform .15s ease,border-color .15s ease,background .15s ease,box-shadow .15s ease; touch-action:manipulation; }
+.song-card.playable:hover,.song-card.playable:focus-visible { transform:translateY(-2px); border-color:#ffd45f; background:rgba(66,26,31,.96); box-shadow:0 7px 18px rgba(0,0,0,.32); outline:none; }
+.song-card.unavailable { cursor:default; opacity:.56; }
+.song-title { padding-right:60px; font-size:clamp(13px,3vw,18px); line-height:1.25; font-weight:1000; color:#fff4d8; }
+.song-difficulty { margin-top:6px; display:flex; align-items:center; gap:6px; }
+.difficulty-label { font-size:9px; font-weight:900; color:rgba(255,255,255,.58); }
+.difficulty-stars { letter-spacing:1px; font-size:clamp(13px,3vw,18px); color:#ffd65f; text-shadow:0 0 8px rgba(255,207,70,.28); }
+.song-status { position:absolute; right:9px; top:9px; padding:3px 6px; border-radius:999px; font-size:8px; font-weight:1000; letter-spacing:.05em; background:rgba(255,255,255,.10); color:rgba(255,255,255,.70); }
+.song-card.playable .song-status { background:rgba(255,205,81,.16); color:#ffdd83; }
+.menu-actions { display:flex; gap:7px; margin-top:14px; }
+.menu-actions > button { flex:1; }
+.menu-secondary-button { min-height:44px; border:1px solid rgba(255,215,140,.34); border-radius:11px; background:rgba(255,255,255,.06); color:#ffe4a5; font-size:12px; font-weight:900; cursor:pointer; touch-action:manipulation; }
+.menu-secondary-button:hover,.menu-secondary-button:focus-visible { background:rgba(255,255,255,.11); outline:none; }
+.result-score { margin:14px 0 5px; color:#ffd85d; font-size:clamp(28px,8vw,44px); font-weight:1000; }
+.result-meta { margin-top:8px; font-size:12px; color:rgba(255,255,255,.72); }
+@media (max-width:480px) {
+  .start-card { padding:16px 10px; }
+  .character-grid { gap:6px; }
+  .character-card { padding:7px 4px 6px; }
+  .song-grid { gap:6px; }
+  .song-card { padding:9px 8px; }
+  .song-title { padding-right:0; }
+  .song-status { position:static; display:inline-block; margin-top:7px; }
+}
+
+
+/* =====================================================
+   MUSIC BAR
+===================================================== */
+
+.music-bar {
+  position: absolute;
+
+  left: 0;
+  right: 0;
+  top: 0;
+
+  height: 4px;
+
+  z-index: 35;
+
+  background:
+    rgba(255,255,255,0.15);
+}
+
+
+.music-progress {
+  width: 0%;
+  height: 100%;
+
+  background:
+    #ffd157;
+}
+
+
+/* =====================================================
+   LANDSCAPE
+===================================================== */
+
+@media
+(
+  orientation: landscape
+)
+and
+(
+  max-height: 600px
+) {
+
+  .app {
+    padding: 3px 5px;
+  }
+
+  .top-ui {
+    margin-bottom: 3px;
+  }
+
+  .panel {
+    min-height: 34px;
+    padding: 2px;
+  }
+
+  .panel .label {
+    font-size: 8px;
+  }
+
+  .panel .value {
+    font-size: 15px;
+    margin-top: 0;
+  }
+
+  .bottom-overlay {
+    padding: 4px 6px;
+  }
+
+  .typing-input {
+    height: 37px;
+    font-size: 14px;
+  }
+
+  .submit-btn {
+    width: 64px;
+    height: 37px;
+
+    font-size: 12px;
+  }
+
+  .miss-line {
+    bottom: 48px;
+  }
+
+  .word {
+    padding: 5px 9px;
+
+    font-size: 14px;
+  }
+
+  .phase-text {
+    font-size:
+      clamp(
+        18px,
+        5vw,
+        34px
+      );
+  }
+
+  .phase-text.long {
+    font-size:
+      clamp(
+        14px,
+        3.8vw,
+        27px
+      );
+  }
+
+  .start-card {
+    padding:
+      12px 16px;
+  }
+
+  .start-card h1 {
+    font-size: 25px;
+  }
+
+  .start-card p {
+    margin: 3px 0;
+    font-size: 10px;
+  }
+
+  .start-button {
+    min-height: 39px;
+    margin-top: 7px;
+
+    font-size: 14px;
+  }
+
+}
+
+</style>
+</head>
+
+<body>
+
+
+<audio
+  id="gameMusic"
+  preload="metadata"
+></audio>
+
+<!-- 음악 선택 화면 미리듣기 전용 -->
+<audio
+  id="previewMusic"
+  preload="metadata"
+></audio>
+
+
+<div class="app">
+
+
+  <!-- TOP -->
+
+  <div class="top-ui">
+
+    <div class="panel">
+      <div class="label">HP</div>
+      <div
+        class="value"
+        id="hpValue"
+      >
+        5
+      </div>
+    </div>
+
+
+    <div class="panel">
+      <div class="label">SCORE</div>
+      <div
+        class="value"
+        id="scoreValue"
+      >
+        0
+      </div>
+    </div>
+
+
+    <div class="panel">
+      <div class="label">COMBO</div>
+      <div
+        class="value"
+        id="comboValue"
+      >
+        0
+      </div>
+    </div>
+
+  </div>
+
+
+  <!-- GAME -->
+
+  <div
+    class="game-stage"
+    id="gameStage"
+  >
+
+
+    <!-- 4:3 ARTBOARD -->
+
+    <div
+      class="stage-art"
+      id="stageArt"
+    >
+
+
+      <!-- BACKGROUND -->
+
+      <img
+        src="./bg-stage-back.png"
+        class="stage-bg"
+        alt=""
+      >
+
+
+      <!-- ORCHESTRA -->
+
+      <div class="orchestra-anchor">
+
+        <img
+          src="./orchestra.png"
+          class="orchestra"
+          alt=""
+        >
+
+      </div>
+
+
+      <!-- SINGER -->
+
+      <div
+        class="singer-anchor"
+        id="singerAnchor"
+      >
+
+        <div
+          class="singer-motion state-normal"
+          id="singerMotion"
+        >
+
+          <img
+            src="./singer-normal.png"
+            class="singer-image"
+            id="singerImage"
+            alt=""
+          >
+
+        </div>
+
+
+        <!-- 정답 입력 시 성악가가 노래하는 말풍선 -->
+
+        <div
+          class="singer-bubble"
+          id="singerBubble"
+          aria-hidden="true"
+        >
+
+          <span
+            id="singerBubbleText"
+          ></span>
+
+        </div>
+
+      </div>
+
+
+    </div>
+
+
+    <!-- MUSIC -->
+
+    <div class="music-bar">
+
+      <div
+        class="music-progress"
+        id="musicProgress"
+      ></div>
+
+    </div>
+
+
+    <!-- FALLING -->
+
+    <div
+      class="falling-layer"
+      id="fallingLayer"
+    ></div>
+
+
+    <!-- LIMIT -->
+
+    <div
+      class="miss-line"
+      id="missLine"
+    >
+
+      <div class="miss-line-label">
+        LIMIT
+      </div>
+
+    </div>
+
+
+    <!-- PHASE -->
+
+    <div
+      class="phase-layer hidden"
+      id="phaseLayer"
+    >
+
+      <div
+        class="phase-text"
+        id="phaseText"
+      ></div>
+
+    </div>
+
+
+    <!-- JUDGEMENT -->
+
+    <div
+      class="judgement-layer"
+      id="judgementLayer"
+    >
+
+      <div
+        class="judgement-main"
+        id="judgementMain"
+      ></div>
+
+      <div
+        class="judgement-sub"
+        id="judgementSub"
+      ></div>
+
+    </div>
+
+
+    <!-- INPUT -->
+
+    <div class="bottom-overlay">
+
+      <div class="input-row">
+
+        <input
+          id="typingInput"
+          class="typing-input"
+          type="text"
+          placeholder="떨어지는 가사를 입력하세요"
+          autocomplete="off"
+          autocapitalize="off"
+          spellcheck="false"
+          enterkeyhint="done"
+        >
+
+        <button
+          id="submitBtn"
+          class="submit-btn"
+          type="button"
+        >
+          입력
+        </button>
+
+      </div>
+
+    </div>
+
+
+    <!-- START / CHARACTER / SONG SELECT -->
+
+    <div
+      class="start-overlay"
+      id="startOverlay"
+    >
+
+      <div class="start-card">
+
+        <div
+          class="menu-content"
+          id="menuContent"
+        ></div>
+
+      </div>
+
+    </div>
+
+
+  </div>
+
+</div>
+
+
+<script>
+
+/* =====================================================
+   MENU FLOW
+===================================================== */
+
+function getDifficultyStars(difficulty) {
+  return "★".repeat(difficulty) + "☆".repeat(3 - difficulty);
+}
+
+function applyCharacter(characterKey) {
+  if (!CHARACTER_SETS[characterKey]) return;
+  selectedCharacterKey = characterKey;
+  SINGER_IMAGES = CHARACTER_SETS[selectedCharacterKey].images;
+  setSingerNormal();
+}
+
+function renderHomeMenu() {
+
+  stopSongPreview();
+
+  startOverlay.classList.remove("hidden");
+  menuContent.innerHTML = `
+    <div class="menu-view home-view">
+      <div class="menu-kicker">OPERA TYPING GAME</div>
+      <h1 class="menu-title">OPERA TYPE</h1>
+      <div class="menu-subtitle">
+        노래가 들리는 순간 가사를 따라 입력하세요.<br><br>
+        PERFECT · GOOD · PASS · MISS
+      </div>
+      <button class="start-button" id="menuStartBtn" type="button">START</button>
+    </div>`;
+  document.getElementById("menuStartBtn").addEventListener("click", () => {
+
+    unlockCharacterMenuSfx();
+
+    renderCharacterMenu();
+
+  });
+}
+
+function renderCharacterMenu() {
+
+  stopSongPreview();
+
+  const cards = Object.entries(CHARACTER_SETS).map(([key, character]) => {
+    const selectedClass = key === selectedCharacterKey ? " selected" : "";
+    return `
+      <button class="character-card${selectedClass}" type="button" data-character="${key}">
+        <div class="character-preview">
+          <img src="${character.preview}" alt="${character.label}">
+        </div>
+        <div class="character-name">${character.label}</div>
+      </button>`;
+  }).join("");
+
+  menuContent.innerHTML = `
+    <div class="menu-view">
+      <div class="menu-kicker">STEP 1</div>
+      <h2 class="menu-section-title">캐릭터 선택</h2>
+      <div class="character-grid">${cards}</div>
+      <div class="menu-actions">
+        <button class="menu-secondary-button" id="backToHomeBtn" type="button">← 처음으로</button>
+      </div>
+    </div>`;
+
+  const canHover =
+    window.matchMedia(
+      "(hover: hover) and (pointer: fine)"
+    ).matches;
+
+
+  menuContent.querySelectorAll("[data-character]").forEach(button => {
+
+    /*
+      PC에서 마우스를 캐릭터 카드 위에 올릴 때만 재생.
+      모바일 터치에서는 hover 효과음을 재생하지 않는다.
+    */
+    if (
+      canHover
+    ) {
+
+      button.addEventListener(
+        "pointerenter",
+        () => {
+
+          playSfx(
+            "characterHover"
+          );
+
+        }
+      );
+
+    }
+
+
+    button.addEventListener(
+      "click",
+      () => {
+
+        playSfx(
+          "characterSelect"
+        );
+
+
+        applyCharacter(
+          button.dataset.character
+        );
+
+
+        renderSongMenu();
+
+      }
+    );
+
+  });
+  document.getElementById("backToHomeBtn").addEventListener("click", renderHomeMenu);
+}
+
+
+/* =====================================================
+   SONG PREVIEW
+===================================================== */
+
+function stopSongPreview() {
+
+  clearTimeout(
+    previewStopTimer
+  );
+
+
+  previewStopTimer =
+    null;
+
+
+  previewSongId =
+    null;
+
+
+  previewMusic.pause();
+
+
+  try {
+
+    previewMusic.currentTime =
+      0;
+
+  }
+
+  catch (
+    error
+  ) {
+
+    /*
+      메타데이터 로딩 전이면 currentTime 변경이
+      불가능할 수 있으므로 무시한다.
+    */
+
+  }
+
+}
+
+
+
+function startSongPreview(
+  song
+) {
+
+  if (
+    !song
+    ||
+    !song.available
+    ||
+    !song.audio
+  ) {
+
+    return;
+
+  }
+
+
+  stopSongPreview();
+
+
+  previewSongId =
+    song.id;
+
+
+  /*
+    전주가 아니라 노래 부분을 들을 수 있도록
+    첫 번째 타자 가사의 시작 시점부터 미리듣기.
+  */
+  const previewStart =
+    song.previewStart
+    ??
+    (
+      song.lyrics
+      &&
+      song.lyrics.length
+      ?
+      song.lyrics[0].time
+      :
+      0
+    );
+
+
+  previewMusic.src =
+    song.audio;
+
+
+  previewMusic.volume =
+    0.55;
+
+
+  previewMusic.load();
+
+
+  const playPreview =
+    () => {
+
+      if (
+        previewSongId
+        !==
+        song.id
+      ) {
+
+        return;
+
+      }
+
+
+      try {
+
+        previewMusic.currentTime =
+          previewStart;
+
+      }
+
+      catch (
+        error
+      ) {
+
+        return;
+
+      }
+
+
+      const playPromise =
+        previewMusic.play();
+
+
+      if (
+        playPromise
+        &&
+        typeof playPromise.catch
+        ===
+        "function"
+      ) {
+
+        playPromise.catch(
+          () => {
+
+            /*
+              브라우저가 hover 자동재생을 막는 경우
+              조용히 실패하고 게임 진행에는 영향 없음.
+            */
+
+          }
+        );
+
+      }
+
+
+      previewStopTimer =
+        setTimeout(
+          () => {
+
+            if (
+              previewSongId
+              ===
+              song.id
+            ) {
+
+              stopSongPreview();
+
+            }
+
+          },
+          6000
+        );
+
+    };
+
+
+  if (
+    previewMusic.readyState
+    >=
+    1
+  ) {
+
+    playPreview();
+
+  }
+
+  else {
+
+    previewMusic.addEventListener(
+      "loadedmetadata",
+      playPreview,
+      {
+        once:
+          true
+      }
+    );
+
+  }
+
+}
+
+
+
+function renderSongMenu() {
+  const selectedCharacter = CHARACTER_SETS[selectedCharacterKey];
+  const songCards = SONGS.map(song => {
+    const status = song.available ? "PLAY" : "준비중";
+    const availabilityClass = song.available ? "playable" : "unavailable";
+    const disabled = song.available ? "" : "disabled";
+    return `
+      <button class="song-card ${availabilityClass}" type="button" data-song="${song.id}" ${disabled}>
+        <div class="song-title">${song.title}</div>
+        <div class="song-difficulty">
+          <span class="difficulty-label">난이도</span>
+          <span class="difficulty-stars">${getDifficultyStars(song.difficulty)}</span>
+        </div>
+        <span class="song-status">${status}</span>
+      </button>`;
+  }).join("");
+
+  menuContent.innerHTML = `
+    <div class="menu-view">
+      <div class="menu-kicker">STEP 2</div>
+      <h2 class="menu-section-title">음악 선택</h2>
+      <div class="menu-selection-info">선택 캐릭터 · ${selectedCharacter.label}</div>
+      <div class="song-grid">${songCards}</div>
+      <div class="menu-actions">
+        <button class="menu-secondary-button" id="backToCharacterBtn" type="button">← 캐릭터 다시 선택</button>
+      </div>
+    </div>`;
+
+  const canPreviewOnHover =
+    window.matchMedia(
+      "(hover: hover) and (pointer: fine)"
+    ).matches;
+
+
+  menuContent.querySelectorAll(".song-card.playable").forEach(button => {
+
+    const getSong =
+      () =>
+        SONGS.find(
+          item =>
+            item.id
+            ===
+            button.dataset.song
+        );
+
+
+    /*
+      PC에서 곡 카드에 마우스를 올리면
+      첫 가사 시작 지점부터 6초 미리듣기.
+    */
+    if (
+      canPreviewOnHover
+    ) {
+
+      button.addEventListener(
+        "pointerenter",
+        () => {
+
+          const song =
+            getSong();
+
+
+          if (
+            song
+          ) {
+
+            startSongPreview(
+              song
+            );
+
+          }
+
+        }
+      );
+
+
+      button.addEventListener(
+        "pointerleave",
+        stopSongPreview
+      );
+
+    }
+
+
+    button.addEventListener(
+      "click",
+      () => {
+
+        const song =
+          getSong();
+
+
+        if (
+          !song
+          ||
+          !song.available
+        ) {
+
+          return;
+
+        }
+
+
+        stopSongPreview();
+
+
+        /*
+          캐릭터 선택 때 쓰는 클릭 전자 효과음을
+          곡 선택에서도 한 번 재생한다.
+        */
+        playSfx(
+          "characterSelect"
+        );
+
+
+        selectedSong =
+          song;
+
+
+        startSelectedSong();
+
+      }
+    );
+
+  });
+
+
+  document
+    .getElementById(
+      "backToCharacterBtn"
+    )
+    .addEventListener(
+      "click",
+      () => {
+
+        stopSongPreview();
+
+        renderCharacterMenu();
+
+      }
+    );
+}
+
+function renderErrorMenu(message) {
+  startOverlay.classList.remove("hidden");
+  menuContent.innerHTML = `
+    <div class="menu-view home-view">
+      <div class="menu-kicker">ERROR</div>
+      <h2 class="menu-section-title">음악 재생 오류</h2>
+      <div class="menu-subtitle">${message}</div>
+      <div class="menu-actions">
+        <button class="start-button" id="retrySongBtn" type="button">다시 시도</button>
+        <button class="menu-secondary-button" id="errorSongMenuBtn" type="button">곡 선택</button>
+      </div>
+    </div>`;
+  document.getElementById("retrySongBtn").addEventListener("click", startSelectedSong);
+  document.getElementById("errorSongMenuBtn").addEventListener("click", renderSongMenu);
+}
+
+function renderResultMenu(cleared) {
+  startOverlay.classList.remove("hidden");
+  const title = cleared ? "STAGE CLEAR!" : "GAME OVER";
+  const message = cleared ? "BRAVO! 👏" : "HP가 모두 소진되었습니다.";
+  const selectedCharacter = CHARACTER_SETS[selectedCharacterKey];
+  menuContent.innerHTML = `
+    <div class="menu-view home-view">
+      <div class="menu-kicker">${message}</div>
+      <h2 class="menu-section-title">${title}</h2>
+      <div class="result-score">${score}</div>
+      <div class="result-meta">${selectedSong.title} · ${selectedCharacter.label} · COMBO ${combo}</div>
+      <div class="menu-actions">
+        <button class="start-button" id="replayBtn" type="button">다시 하기</button>
+        <button class="menu-secondary-button" id="resultSongMenuBtn" type="button">곡 선택</button>
+      </div>
+    </div>`;
+  document.getElementById("replayBtn").addEventListener("click", startSelectedSong);
+  document.getElementById("resultSongMenuBtn").addEventListener("click", renderSongMenu);
+}
+
+function startSelectedSong() {
+
+  stopSongPreview();
+
+  if (!selectedSong || !selectedSong.available) return;
+
+  currentLyricsTimeline =
+    selectedSong.lyrics || [];
+
+  currentPhaseTimeline =
+    selectedSong.phases || [];
+
+  currentFallSpeed =
+    selectedSong.fallSpeed || 1;
+
+  document.title =
+    `OPERA TYPE - ${selectedSong.title}`;
+
+  gameMusic.pause();
+  gameMusic.src = selectedSong.audio;
+  gameMusic.load();
+
+  startGame();
+}
+
+
+
+/* =====================================================
+   CONFIG
+===================================================== */
+
+const CONFIG = {
+
+  maxHp: 5,
+
+  limitTime: 4.0,
+
+  perfectScoreRate: 1,
+
+  goodScoreRate: 0.8,
+
+  passScoreRate: 0.35
+
+};
+
+
+
+/* =====================================================
+   최신 타임라인
+===================================================== */
+
+const BRINDISI_LYRICS = [
+
+  { time: 11.6, text: "리비아모" },
+  { time: 13.3, text: "리비아모 네" },
+  { time: 15.1, text: "리에티 까리치" },
+  { time: 17.2, text: "께 라 벨레짜" },
+  { time: 19.5, text: "인피오라" },
+
+  { time: 21.5, text: "에 라 풋제볼" },
+  { time: 23.3, text: "풋제볼 오라" },
+  { time: 25.3, text: "씨네브리 아" },
+  { time: 27.3, text: "볼루따" },
+
+  { time: 29.5, text: "리비암 네 돌치" },
+  { time: 31.7, text: "프레미티" },
+  { time: 33.5, text: "께 수시따" },
+  { time: 35.3, text: "라모레" },
+
+  { time: 36.8, text: "뽀이께" },
+  { time: 38.3, text: "꿸로끼오" },
+  { time: 39.9, text: "알 꼬레" },
+  { time: 41.7, text: "온니뽀뗀떼 바" },
+
+  { time: 43.8, text: "리비아모" },
+  { time: 45.7, text: "아모레 아모르" },
+  { time: 47.5, text: "프라 이 깔리치" },
+  { time: 49.3, text: "삐우 깔디" },
+  { time: 50.9, text: "바치 아브라" },
+
+
+  /* 52 ~ 61.5 : 간주 + 합창 */
+
+
+  { time: 61.5, text: "뜨라 보이" },
+  { time: 64.1, text: "뜨라 보이" },
+  { time: 64.8, text: "사프로 디비데레" },
+  { time: 68.4, text: "일 뗌뽀" },
+  { time: 69.0, text: "미오 죠꼰도" },
+
+  { time: 71.9, text: "뚜또 에 폴리아" },
+  { time: 74.7, text: "폴리아 넬" },
+  { time: 75.8, text: "몬도 쵸 께 논" },
+  { time: 77.8, text: "에 삐아체르" },
+
+  { time: 80.5, text: "고디암 푸가체" },
+  { time: 82.5, text: "에 라피도" },
+  { time: 84.8, text: "에 일 가우디오" },
+  { time: 86.0, text: "델라모레" },
+
+  { time: 88.0, text: "에 운 피오르" },
+  { time: 89.5, text: "께 나셰 에" },
+  { time: 90.5, text: "무오레" },
+  { time: 92.2, text: "네 피우 씨" },
+  { time: 93.8, text: "뿌오 고데르" },
+
+  { time: 96.7, text: "고디암 친비따" },
+  { time: 100.0, text: "친비따 운" },
+  { time: 101.5, text: "페르비도" },
+  { time: 102.5, text: "아첸또" },
+  { time: 104.0, text: "루진기에르" },
+
+
+  /* 106 ~ 124.5 : 합창 */
+
+
+  { time: 124.5, text: "라 비따" },
+  { time: 125.5, text: "에 넬" },
+  { time: 126.5, text: "뜨리푸디오" },
+
+  { time: 128.0, text: "꽌도 논" },
+  { time: 128.8, text: "사미 안꼬라" },
+
+  { time: 132.0, text: "놀 디떼" },
+  { time: 133.0, text: "아 끼" },
+  { time: 133.6, text: "리뇨라" },
+
+  { time: 135.5, text: "에일 미오" },
+  { time: 136.6, text: "데스띤 꼬지" },
+
+
+  /* 피날레 */
+
+  { time: 140.5, text: "고디아모" },
+
+  { time: 142.0, text: "라 타짜" },
+  { time: 143.0, text: "라 타짜" },
+
+  { time: 144.2, text: "에 일 깐띠꼬" },
+
+  { time: 146.0, text: "라 놋떼" },
+  { time: 146.9, text: "압벨라" },
+
+  { time: 148.0, text: "에 일 리조" },
+
+  { time: 149.0, text: "인 꿰스또" },
+  { time: 151.0, text: "인 꿰스또" },
+
+  { time: 152.3, text: "빠라디조" },
+
+  { time: 154.5, text: "네 스꼬쁘라" },
+
+  { time: 155.5, text: "일 누오보 디" },
+
+  { time: 156.5, text: "아 아 아 네" },
+
+  { time: 159.0, text: "스꼬쁘라 일 디" },
+
+  { time: 160.0, text: "아 아 아 네" },
+
+  { time: 162.0, text: "스꼬쁘라 일 디" },
+
+  { time: 164.0, text: "아 씨" }
+
+];
+
+
+
+/* =====================================================
+   PHASE
+===================================================== */
+
+const BRINDISI_PHASES = [
+
+  {
+    start: 0,
+    end: 11.6,
+    text: "전주 중"
+  },
+
+  {
+    start: 52.0,
+    end: 53.0,
+    text: "간주 중"
+  },
+
+  {
+    start: 53.0,
+    end: 60.0,
+    text: "합창을 들으며 기다리세요"
+  },
+
+  {
+    start: 60.0,
+    end: 61.5,
+    text: "간주 중"
+  },
+
+  {
+    start: 106.0,
+    end: 124.5,
+    text: "합창을 들으며 기다리세요"
+  }
+
+];
+
+
+
+
+
+/* =====================================================
+   남촌 타임라인
+===================================================== */
+
+const NAMCHON_LYRICS = [
+
+  { time: 15.5, text: "산 너머 남촌에는" },
+  { time: 22.0, text: "누가 살길래" },
+  { time: 28.0, text: "해마다 봄바람이" },
+  { time: 35.0, text: "남으로 오네" },
+
+  { time: 43.5, text: "꽃이 피는 사월이면" },
+  { time: 50.0, text: "진달래 향기" },
+  { time: 55.0, text: "밀 익는 오월이면" },
+  { time: 62.0, text: "보리 내음새" },
+
+  { time: 70.0, text: "어느 것 한 가진들" },
+  { time: 76.5, text: "실어 안 오리" },
+  { time: 83.0, text: "남촌서 남풍 불 때" },
+  { time: 90.5, text: "나는 좋대나" },
+
+  { time: 99.5, text: "산 너머 남촌에는" },
+  { time: 106.0, text: "누가 살길래" },
+  { time: 112.0, text: "저 하늘 저 빛깔이" },
+  { time: 119.0, text: "그리 고울까" },
+
+  { time: 127.8, text: "금잔디 넓은 들엔" },
+  { time: 134.5, text: "호랑나비 떼" },
+  { time: 140.0, text: "버들가지 실개천엔" },
+  { time: 147.0, text: "종달새 노래" },
+
+  { time: 154.5, text: "어느 것 한 가진들" },
+  { time: 161.0, text: "실어 안 오리" },
+  { time: 167.5, text: "남촌서 남풍 불 때" },
+  { time: 174.5, text: "나는 좋대나" }
+
+];
+
+
+const NAMCHON_PHASES = [
+
+  {
+    start: 0,
+    end: 15.5,
+    text: "전주 중"
+  }
+
+];
+
+
+
+
+/* =====================================================
+   첫사랑 타임라인
+===================================================== */
+
+const FIRSTLOVE_LYRICS = [
+
+  { time: 20.5, text: "그대를 처음 본" },
+  { time: 25.5, text: "순간이여" },
+  { time: 29.0, text: "설레는 내 마음에" },
+  { time: 32.0, text: "빛을 담았네" },
+
+  { time: 37.5, text: "말 못 해 애타는" },
+  { time: 41.0, text: "시간이여" },
+  { time: 46.5, text: "나 홀로 저민다" },
+
+  { time: 54.0, text: "그 눈길 마주친" },
+  { time: 58.0, text: "순간이여" },
+  { time: 61.5, text: "내 마음 알릴세라" },
+  { time: 64.5, text: "눈빛 돌리네" },
+
+  { time: 69.5, text: "그대와 함께 한" },
+  { time: 73.0, text: "시간이여" },
+  { time: 77.5, text: "나 홀로 벅차다" },
+
+  { time: 85.5, text: "내 영혼이여" },
+  { time: 88.5, text: "간절히 기도해" },
+  { time: 93.0, text: "온 세상이여" },
+  { time: 96.5, text: "날 위해 노래해" },
+
+  { time: 100.0, text: "언제나 그대에게" },
+  { time: 103.5, text: "내 마음 전할까" },
+
+  { time: 113.0, text: "오늘도" },
+  { time: 116.0, text: "그대만" },
+  { time: 118.5, text: "생각하며" },
+  { time: 122.5, text: "살다" },
+  { time: 131.0, text: "첫사랑" }
+];
+
+
+const FIRSTLOVE_PHASES = [
+
+  {
+    start: 0,
+    end: 21.0,
+    text: "전주 중"
+  }
+
+];
+
+
+
+
+/* =====================================================
+   산타루치아 타임라인
+===================================================== */
+
+const SANTALUCIA_LYRICS = [
+
+  { time: 16.0, text: "쑬 마레 루치카" },
+  { time: 21.0, text: "라스트로 다르젠또" },
+  { time: 25.0, text: "플라치다 에 론다" },
+  { time: 29.5, text: "프로스페 로 에일 벤또" },
+
+  { time: 33.5, text: "쑬 마레 루치카" },
+  { time: 38.0, text: "라스트로 다르젠또" },
+  { time: 42.0, text: "플라치다 에 론다" },
+  { time: 46.0, text: "프로스페 로 에일 벤또" },
+
+  { time: 49.5, text: "베니떼 알 라지레" },
+  { time: 54.5, text: "바르께따 미아" },
+  { time: 58.5, text: "산타 루치아" },
+  { time: 62.0, text: "산타 루치아" },
+
+  { time: 66.0, text: "베니떼 알 라지레" },
+  { time: 71.0, text: "바르께따 미아" },
+  { time: 74.5, text: "산타 루치아" },
+  { time: 78.5, text: "산타 루치아" }
+
+];
+
+
+const SANTALUCIA_PHASES = [
+
+  {
+    start: 0,
+    end: 16.0,
+    text: "전주 중"
+  }
+
+];
+
+
+
+
+/* =====================================================
+   오 나의 태양 타임라인
+===================================================== */
+
+const OSOLEMIO_LYRICS = [
+
+  { time: 17.0, text: "께 벨라 꼬자" },
+  { time: 20.0, text: "나 유르 나타 에 쏠레" },
+  { time: 24.0, text: "나리아 쎄레나" },
+  { time: 28.0, text: "돕뽀 나 뗌페스타" },
+
+  { time: 33.0, text: "뻴라리아 프레스카" },
+  { time: 36.0, text: "빠레 쟈 나 페스따" },
+  { time: 40.5, text: "께 벨라 꼬자" },
+  { time: 43.0, text: "나 유르나타 에 쏠레" },
+
+  { time: 48.5, text: "마 나뚜 쏠레" },
+  { time: 56.0, text: "뀨 벨로이네" },
+  { time: 59.5, text: "오 쏠레미오" },
+  { time: 64.0, text: "스탄 프론 떼아 떼" },
+
+  { time: 68.5, text: "오 쏠레 오 쏠레 미오" },
+  { time: 75.0, text: "스탄 프론 떼아 떼" },
+  { time: 79.0, text: "스탄 프론 떼아 떼" }
+
+];
+
+
+const OSOLEMIO_PHASES = [
+
+  {
+    start: 0,
+    end: 17.0,
+    text: "전주 중"
+  }
+
+];
+
+
+
+
+/* =====================================================
+   마중 타임라인
+===================================================== */
+
+const MAJOONG_LYRICS = [
+
+  { time: 14.0, text: "사랑이 너무 멀어" },
+  { time: 21.0, text: "올 수 없다면 내가 갈게" },
+  { time: 28.0, text: "말 한마디 그리운 저녁" },
+  { time: 34.5, text: "얼굴 마주하고 앉아" },
+
+  { time: 42.0, text: "그대 꿈 가만가만" },
+  { time: 48.5, text: "들어주고 내 사랑 들려주며" },
+  { time: 55.0, text: "그립다는 것은 오래 전" },
+  { time: 62.0, text: "잃어버린 향기가 아닐까" },
+
+  { time: 69.0, text: "사는 게 무언지" },
+  { time: 75.5, text: "하무뭇하니" },
+  { time: 78.0, text: "그리워지는 날에는" },
+  { time: 83.0, text: "그대여 내가 먼저 달려가" },
+  { time: 90.0, text: "꽃으로 서 있을게" },
+
+  /* 98 ~ 110 : 간주 */
+
+  { time: 110.0, text: "그립다는 것은 오래 전" },
+  { time: 118.0, text: "잃어버린 향기가 아닐까" },
+  { time: 124.0, text: "사는 게 무언지" },
+  { time: 131.0, text: "하무뭇하니" },
+  { time: 133.0, text: "그리워지는 날에는" },
+  { time: 138.5, text: "그대여 내가 먼저 달려가" },
+  { time: 144.5, text: "꽃으로 서 있을게" },
+  { time: 152.0, text: "꽃으로" },
+  { time: 157.0, text: "서 있을게" }
+
+];
+
+
+const MAJOONG_PHASES = [
+
+  {
+    start: 0,
+    end: 14.0,
+    text: "전주 중"
+  },
+
+  {
+    start: 98.0,
+    end: 110.0,
+    text: "간주 중"
+  }
+
+];
+
+
+
+
+/* =====================================================
+   울게 하소서 (Lascia ch'io pianga) 타임라인
+===================================================== */
+
+const LASCIA_LYRICS = [
+
+  { time: 8.0, text: "라샤 끼오 삐앙가" },
+  { time: 14.5, text: "라 두라 쏘르떼" },
+  { time: 22.0, text: "에 께 쏘스피리" },
+  { time: 29.0, text: "라 리베르따" },
+
+  { time: 37.5, text: "에 께 쏘스피리" },
+  { time: 45.0, text: "에 께 쏘스피리" },
+  { time: 52.0, text: "라 리베르따" },
+
+  { time: 60.5, text: "라샤 끼오 삐앙가" },
+  { time: 68.0, text: "라 두라 쏘르떼" },
+  { time: 76.0, text: "에 께 쏘스피리" },
+  { time: 83.0, text: "라 리베르따" },
+
+  /* 92 ~ 100 : 간주 */
+
+  { time: 101.0, text: "일 두올로 인프랑가" },
+  { time: 107.0, text: "꿰스떼 리또르떼" },
+
+  /*
+    사용자가 적어준 123.5는 순서상 113.5의 오타로 보이며,
+    실제 가사 진행 순서에 맞춰 113.5로 적용.
+  */
+  { time: 113.5, text: "데 미에이 마르띠리" },
+  { time: 120.0, text: "쏠 뻬르 삐에따" },
+
+  { time: 126.5, text: "데 미에이 마르띠리" },
+  { time: 133.5, text: "쏠 뻬르 삐에따" },
+
+  { time: 140.0, text: "라샤 끼오 삐앙가" },
+  { time: 148.5, text: "라 두라 쏘르떼" },
+  { time: 156.0, text: "에 께 쏘스피리" },
+  { time: 163.0, text: "라 리베르따" },
+
+  { time: 171.5, text: "에 께 쏘스피리" },
+  { time: 179.0, text: "에 께 쏘스피리" },
+  { time: 186.0, text: "라 리베르따" },
+
+  { time: 195.0, text: "라샤 끼오 삐앙가" },
+  { time: 203.0, text: "라 두라 쏘르떼" },
+  { time: 211.0, text: "에 께 쏘스피리" },
+  { time: 218.0, text: "라 리베르따" }
+
+];
+
+
+const LASCIA_PHASES = [
+
+  {
+    start: 0,
+    end: 8.0,
+    text: "전주 중"
+  },
+
+  {
+    start: 92.0,
+    end: 100.0,
+    text: "간주 중"
+  }
+
+];
+
+
+
+
+/* =====================================================
+   꼭 안아줄래요 타임라인
+===================================================== */
+
+const HUG_LYRICS = [
+
+  { time: 22.5, text: "꼭 안아줄래요" },
+  { time: 25.5, text: "내 친구 아픈 마음을" },
+  { time: 30.0, text: "내가 속상할 때" },
+  { time: 34.5, text: "누군가 그랬던 것처럼" },
+
+  { time: 39.5, text: "친구의 잘못은" },
+  { time: 42.5, text: "따뜻한 용서로" },
+  { time: 44.5, text: "안아주고" },
+  { time: 47.0, text: "친구의 실수도" },
+  { time: 52.0, text: "이해로 안아줄래요" },
+
+  { time: 58.5, text: "어쩌다 생긴 미움은" },
+  { time: 63.0, text: "어떡할까" },
+  { time: 67.5, text: "사랑으로 사랑으로" },
+  { time: 74.0, text: "안아줄래요" },
+
+  { time: 80.0, text: "꼭 안아줄래요" },
+  { time: 84.0, text: "따뜻한 마음으로" },
+  { time: 89.5, text: "꼭 안아주세요" },
+  { time: 93.0, text: "포근한 마음으로" },
+  { time: 96.5, text: "행복꽃이 활짝" },
+  { time: 101.0, text: "우리들 마음에" },
+  { time: 103.0, text: "피어나게" },
+
+  { time: 106.0, text: "꼭 안아줄래요" },
+  { time: 110.0, text: "내 친구를" },
+  { time: 113.0, text: "꼭 안아줄래요" }
+
+];
+
+
+const HUG_PHASES = [
+
+  {
+    start: 0,
+    end: 22.5,
+    text: "전주 중"
+  }
+
+];
+
+
+/* =====================================================
+   CHARACTER / SINGER IMAGES
+===================================================== */
+
+const CHARACTER_SETS = {
+  soprano: {
+    label: "소프라노",
+    preview: "./soprano-normal.png",
+    images: {
+      normal: "./soprano-normal.png",
+      perfect: "./soprano-perfect.png",
+      good: "./soprano-good.png",
+      pass: "./soprano-pass.png",
+      miss: "./soprano-miss.png"
+    }
+  },
+  tenor: {
+    label: "테너",
+    preview: "./singer-normal.png",
+    images: {
+      normal: "./singer-normal.png",
+      perfect: "./singer-perfect.png",
+      good: "./singer-good.png",
+      pass: "./singer-pass.png",
+      miss: "./singer-miss.png"
+    }
+  },
+  baritone: {
+    label: "바리톤",
+    preview: "./baritone-normal.png",
+    images: {
+      normal: "./baritone-normal.png",
+      perfect: "./baritone-perfect.png",
+      good: "./baritone-good.png",
+      pass: "./baritone-pass.png",
+      miss: "./baritone-miss.png"
+    }
+  }
+};
+
+const SONGS = [
+  {
+    id: "hug",
+    title: "꼭 안아줄래요",
+    difficulty: 2,
+    fallSpeed: 1,
+    available: true,
+    audio: "./hug.mp3",
+    lyrics: HUG_LYRICS,
+    phases: HUG_PHASES
+  },
+
+  {
+    id: "namchon",
+    title: "남촌",
+    difficulty: 1,
+    fallSpeed: 2,
+    available: true,
+    audio: "./namchon.mp3",
+    lyrics: NAMCHON_LYRICS,
+    phases: NAMCHON_PHASES
+  },
+
+  {
+    id: "majoong",
+    title: "마중",
+    difficulty: 1,
+    fallSpeed: 2,
+    available: true,
+    audio: "./majoong.mp3",
+    lyrics: MAJOONG_LYRICS,
+    phases: MAJOONG_PHASES
+  },
+
+  {
+    id: "santalucia",
+    title: "산타루치아",
+    difficulty: 2,
+
+    /*
+      속도 미지정이므로 기본값 1.
+      축배의 노래와 같은 낙하속도.
+    */
+    fallSpeed: 1,
+
+    available: true,
+    audio: "./santalucia.mp3",
+    lyrics: SANTALUCIA_LYRICS,
+    phases: SANTALUCIA_PHASES
+  },
+
+  {
+    id: "face",
+    title: "얼굴",
+    difficulty: 1,
+    available: false
+  },
+
+  {
+    id: "osolemio",
+    title: "오 나의 태양",
+    difficulty: 2,
+    fallSpeed: 2,
+    available: true,
+    audio: "./osolemio.mp3",
+    lyrics: OSOLEMIO_LYRICS,
+    phases: OSOLEMIO_PHASES
+  },
+
+  {
+    id: "lascia",
+    title: "울게 하소서",
+    difficulty: 2,
+    fallSpeed: 2,
+    available: true,
+    audio: "./lascia.mp3",
+    lyrics: LASCIA_LYRICS,
+    phases: LASCIA_PHASES
+  },
+
+  {
+    id: "first-love",
+    title: "첫사랑",
+    difficulty: 1,
+    fallSpeed: 2,
+    available: true,
+    audio: "./firstlove.mp3",
+    lyrics: FIRSTLOVE_LYRICS,
+    phases: FIRSTLOVE_PHASES
+  },
+
+  {
+    id: "brindisi",
+    title: "축배의 노래",
+    difficulty: 3,
+    fallSpeed: 1,
+    available: true,
+    audio: "./brindisi.mp3",
+    lyrics: BRINDISI_LYRICS,
+    phases: BRINDISI_PHASES
+  }
+];
+
+let selectedCharacterKey = "tenor";
+let selectedSong = SONGS.find(song => song.id === "brindisi");
+
+let currentLyricsTimeline =
+  selectedSong.lyrics;
+
+let currentPhaseTimeline =
+  selectedSong.phases;
+
+/*
+  낙하 속도 기준값
+  축배의 노래 = 1
+  2 = 두 배 느리게
+  0.5 = 두 배 빠르게
+
+  이 값은 게임 화면에는 표시하지 않는다.
+*/
+let currentFallSpeed =
+  selectedSong.fallSpeed || 1;
+
+let SINGER_IMAGES = CHARACTER_SETS[selectedCharacterKey].images;
+
+Object.values(CHARACTER_SETS).forEach(character => {
+  Object.values(character.images).forEach(src => {
+    const img = new Image();
+    img.src = src;
+  });
+});
+
+
+/* =====================================================
+   DOM
+===================================================== */
+
+const gameMusic =
+  document.getElementById("gameMusic");
+
+const previewMusic =
+  document.getElementById("previewMusic");
+
+const gameStage =
+  document.getElementById("gameStage");
+
+const stageArt =
+  document.getElementById("stageArt");
+
+const fallingLayer =
+  document.getElementById("fallingLayer");
+
+const missLine =
+  document.getElementById("missLine");
+
+const typingInput =
+  document.getElementById("typingInput");
+
+const submitBtn =
+  document.getElementById("submitBtn");
+
+const hpValue =
+  document.getElementById("hpValue");
+
+const scoreValue =
+  document.getElementById("scoreValue");
+
+const comboValue =
+  document.getElementById("comboValue");
+
+const judgementLayer =
+  document.getElementById("judgementLayer");
+
+const judgementMain =
+  document.getElementById("judgementMain");
+
+const judgementSub =
+  document.getElementById("judgementSub");
+
+const phaseLayer =
+  document.getElementById("phaseLayer");
+
+const phaseText =
+  document.getElementById("phaseText");
+
+const startOverlay =
+  document.getElementById("startOverlay");
+
+const menuContent =
+  document.getElementById("menuContent");
+
+const musicProgress =
+  document.getElementById("musicProgress");
+
+const singerMotion =
+  document.getElementById("singerMotion");
+
+const singerImage =
+  document.getElementById("singerImage");
+
+const singerBubble =
+  document.getElementById("singerBubble");
+
+const singerBubbleText =
+  document.getElementById("singerBubbleText");
+
+
+/* =====================================================
+   SOUND EFFECTS
+===================================================== */
+
+const SFX_FILES = {
+
+  perfect:
+    "./sfx-perfect.wav",
+
+  good:
+    "./sfx-good.mp3",
+
+  pass:
+    "./sfx-pass.wav",
+
+  miss:
+    "./sfx-miss.mp3",
+
+  clear:
+    "./sfx-clear.mp3",
+
+  characterSelect:
+    "./sfx-character-select.mp3",
+
+  characterHover:
+    "./sfx-character-hover.mp3"
+
+};
+
+
+/*
+  기본 효과음 객체.
+  실제 판정음은 cloneNode()로 복제해서 재생하므로
+  연속 판정이 나와도 앞 효과음이 끊기지 않는다.
+*/
+
+const SFX_AUDIO = {};
+
+Object.entries(
+  SFX_FILES
+).forEach(([
+  key,
+  src
+]) => {
+
+  const audio =
+    new Audio(src);
+
+  audio.preload =
+    "auto";
+
+  SFX_AUDIO[key] =
+    audio;
+
+});
+
+
+
+function unlockCharacterMenuSfx() {
+
+  [
+    "characterSelect",
+    "characterHover"
+  ].forEach(key => {
+
+    const audio =
+      SFX_AUDIO[key];
+
+
+    if (
+      !audio
+    ) {
+
+      return;
+
+    }
+
+
+    const originalMuted =
+      audio.muted;
+
+
+    audio.muted =
+      true;
+
+
+    const playPromise =
+      audio.play();
+
+
+    if (
+      playPromise
+      &&
+      typeof playPromise.then
+      ===
+      "function"
+    ) {
+
+      playPromise
+        .then(() => {
+
+          audio.pause();
+          audio.currentTime = 0;
+          audio.muted = originalMuted;
+
+        })
+        .catch(() => {
+
+          audio.muted = originalMuted;
+
+        });
+
+    }
+
+  });
+
+}
+
+
+function playSfx(
+  key
+) {
+
+  const baseAudio =
+    SFX_AUDIO[key];
+
+
+  if (
+    !baseAudio
+  ) {
+
+    return;
+
+  }
+
+
+  /*
+    클리어 박수는 길이가 길기 때문에
+    기본 객체 자체를 사용해서 새 게임 시작 시 중단할 수 있게 한다.
+    나머지 판정음은 복제본으로 재생한다.
+  */
+
+  const sound =
+    key === "clear"
+    ?
+    baseAudio
+    :
+    baseAudio.cloneNode();
+
+
+  sound.pause();
+  sound.currentTime = 0;
+
+
+  sound.volume =
+    key === "clear"
+    ?
+    0.9
+    :
+    0.72;
+
+
+  const playPromise =
+    sound.play();
+
+
+  if (
+    playPromise
+    &&
+    typeof playPromise.catch
+    ===
+    "function"
+  ) {
+
+    playPromise.catch(
+      () => {}
+    );
+
+  }
+
+}
+
+
+function stopClearSfx() {
+
+  const clearAudio =
+    SFX_AUDIO.clear;
+
+
+  if (
+    !clearAudio
+  ) {
+
+    return;
+
+  }
+
+
+  clearAudio.pause();
+  clearAudio.currentTime = 0;
+
+}
+
+
+/* =====================================================
+   STATE
+===================================================== */
+
+let activeWords = [];
+
+let nextLyricIndex = 0;
+
+let hp =
+  CONFIG.maxHp;
+
+let score =
+  0;
+
+let combo =
+  0;
+
+let gameRunning =
+  false;
+
+let animationId =
+  null;
+
+let wordIdCounter =
+  0;
+
+let isComposing =
+  false;
+
+let judgementTimer =
+  null;
+
+let singerStateTimer =
+  null;
+
+let singerBubbleTimer =
+  null;
+
+let previewStopTimer =
+  null;
+
+let previewSongId =
+  null;
+
+
+
+/* =====================================================
+   ★ 4:3 무대 자동 맞춤
+
+   현재 gameStage 안에 들어갈 수 있는
+   가장 큰 4:3 크기를 계산한다.
+
+   그래서 모바일/PC/가로화면 모두
+   배경 + 오케스트라 + 싱어가
+   한 세트처럼 함께 움직인다.
+===================================================== */
+
+function fitStageArt() {
+
+  const containerWidth =
+    gameStage.clientWidth;
+
+  const containerHeight =
+    gameStage.clientHeight;
+
+  const stageRatio =
+    4 / 3;
+
+  let width;
+  let height;
+
+  const containerRatio =
+    containerWidth
+    /
+    containerHeight;
+
+
+  /*
+    COVER 방식
+
+    게임 화면 전체를
+    반드시 배경으로 채운다.
+
+    대신 화면 비율에 따라
+    배경 일부가 잘릴 수 있다.
+  */
+
+  if (
+    containerRatio
+    >
+    stageRatio
+  ) {
+
+    /*
+      화면이 가로로 더 넓음
+      → 가로폭을 꽉 채움
+    */
+
+    width =
+      containerWidth;
+
+    height =
+      width
+      /
+      stageRatio;
+
+  }
+
+  else {
+
+    /*
+      화면이 세로로 더 김
+      → 세로높이를 꽉 채움
+    */
+
+    height =
+      containerHeight;
+
+    width =
+      height
+      *
+      stageRatio;
+
+  }
+
+
+  stageArt.style.width =
+    width
+    +
+    "px";
+
+
+  stageArt.style.height =
+    height
+    +
+    "px";
+}
+
+
+/* =====================================================
+   BASIC
+===================================================== */
+
+function removeSpaces(text) {
+
+  return text.replace(
+    /\s+/g,
+    ""
+  );
+
+}
+
+
+function updateUI() {
+
+  hpValue.textContent =
+    hp;
+
+  scoreValue.textContent =
+    score;
+
+  comboValue.textContent =
+    combo;
+
+}
+
+
+
+/* =====================================================
+   SINGER STATE
+===================================================== */
+
+function setSingerNormal() {
+
+  clearTimeout(
+    singerStateTimer
+  );
+
+
+  singerMotion.className =
+    "singer-motion state-normal";
+
+
+  singerImage.src =
+    SINGER_IMAGES.normal;
+
+}
+
+
+
+function setSingerState(
+  state
+) {
+
+  clearTimeout(
+    singerStateTimer
+  );
+
+
+  singerImage.src =
+    SINGER_IMAGES[state]
+    ||
+    SINGER_IMAGES.normal;
+
+
+  singerMotion.className =
+    "singer-motion state-"
+    +
+    state;
+
+
+  let duration =
+    800;
+
+
+  if (
+    state === "perfect"
+  ) {
+    duration = 950;
+  }
+
+
+  else if (
+    state === "good"
+  ) {
+    duration = 820;
+  }
+
+
+  else if (
+    state === "pass"
+  ) {
+    duration = 750;
+  }
+
+
+  else if (
+    state === "miss"
+  ) {
+    duration = 1050;
+  }
+
+
+  singerStateTimer =
+    setTimeout(
+      setSingerNormal,
+      duration
+    );
+
+}
+
+
+
+/* =====================================================
+   CURRENT TARGET
+===================================================== */
+
+function getCurrentTarget() {
+
+  if (
+    activeWords.length
+    ===
+    0
+  ) {
+
+    return null;
+
+  }
+
+
+  let target =
+    activeWords[0];
+
+
+  for (
+    const word
+    of activeWords
+  ) {
+
+    if (
+      word.order
+      <
+      target.order
+    ) {
+
+      target =
+        word;
+
+    }
+
+  }
+
+
+  return target;
+
+}
+
+
+
+function updateTargetHighlight() {
+
+  const target =
+    getCurrentTarget();
+
+
+  activeWords.forEach(word => {
+
+    word.element.classList.remove(
+      "target",
+      "waiting"
+    );
+
+
+    if (
+      target
+      &&
+      target.id
+      ===
+      word.id
+    ) {
+
+      word.element.classList.add(
+        "target"
+      );
+
+    }
+
+    else {
+
+      word.element.classList.add(
+        "waiting"
+      );
+
+    }
+
+  });
+
+}
+
+
+
+/* =====================================================
+   PHASE MESSAGE
+===================================================== */
+
+function updatePhaseMessage(
+  currentTime
+) {
+
+  if (
+    activeWords.length
+    >
+    0
+  ) {
+
+    phaseLayer.classList.add(
+      "hidden"
+    );
+
+    return;
+
+  }
+
+
+  let currentPhase =
+    null;
+
+
+  for (
+    const phase
+    of currentPhaseTimeline
+  ) {
+
+    if (
+      currentTime
+      >=
+      phase.start
+
+      &&
+
+      currentTime
+      <
+      phase.end
+    ) {
+
+      currentPhase =
+        phase;
+
+      break;
+
+    }
+
+  }
+
+
+  if (
+    !currentPhase
+  ) {
+
+    phaseLayer.classList.add(
+      "hidden"
+    );
+
+    return;
+
+  }
+
+
+  phaseText.textContent =
+    currentPhase.text;
+
+
+  if (
+    currentPhase.text.length
+    >
+    6
+  ) {
+
+    phaseText.classList.add(
+      "long"
+    );
+
+  }
+
+  else {
+
+    phaseText.classList.remove(
+      "long"
+    );
+
+  }
+
+
+  phaseLayer.classList.remove(
+    "hidden"
+  );
+
+}
+
+
+
+/* =====================================================
+   JUDGEMENT
+===================================================== */
+
+
+/* =====================================================
+   SINGER LYRIC BUBBLE
+===================================================== */
+
+function hideSingerBubble() {
+
+  clearTimeout(
+    singerBubbleTimer
+  );
+
+
+  singerBubble.className =
+    "singer-bubble";
+
+
+  singerBubbleText.textContent =
+    "";
+
+}
+
+
+
+function showSingerBubble(
+  grade,
+  lyricText
+) {
+
+  /*
+    MISS는 정상적으로 노래한 것으로 표현하지 않으므로
+    말풍선을 띄우지 않는다.
+  */
+  if (
+    grade === "MISS"
+  ) {
+
+    return;
+
+  }
+
+
+  clearTimeout(
+    singerBubbleTimer
+  );
+
+
+  singerBubbleText.textContent =
+    lyricText;
+
+
+  const gradeClass =
+    grade.toLowerCase();
+
+
+  /*
+    매 입력마다 애니메이션을 처음부터 다시 재생.
+  */
+  singerBubble.className =
+    "singer-bubble";
+
+
+  void singerBubble.offsetWidth;
+
+
+  singerBubble.classList.add(
+    "grade-" + gradeClass,
+    "show"
+  );
+
+
+  singerBubbleTimer =
+    setTimeout(
+      () => {
+
+        singerBubble.className =
+          "singer-bubble";
+
+        singerBubbleText.textContent =
+          "";
+
+      },
+      2700
+    );
+
+}
+
+
+
+function showJudgement(
+  grade,
+  subText = ""
+) {
+
+  clearTimeout(
+    judgementTimer
+  );
+
+
+  judgementMain.textContent =
+    grade;
+
+
+  judgementSub.textContent =
+    subText;
+
+
+  judgementLayer.className =
+    "judgement-layer";
+
+
+  void judgementLayer.offsetWidth;
+
+
+  judgementLayer.classList.add(
+    grade.toLowerCase(),
+    "show"
+  );
+
+
+  const judgementKey =
+    grade.toLowerCase();
+
+
+  setSingerState(
+    judgementKey
+  );
+
+
+  /*
+    판정별 효과음
+    PERFECT → 띠롱
+    GOOD    → 클릭전자 (7)
+    PASS    → 휙 지나가는 소리
+    MISS    → 벨(일렉 다크 공명)
+  */
+  playSfx(
+    judgementKey
+  );
+
+
+  judgementTimer =
+    setTimeout(
+      () => {
+
+        judgementLayer.className =
+          "judgement-layer";
+
+      },
+      680
+    );
+
+}
+
+
+
+/* =====================================================
+   CREATE WORD
+===================================================== */
+
+function createWord(
+  lyric,
+  order
+) {
+
+  const element =
+    document.createElement(
+      "div"
+    );
+
+
+  element.className =
+    "word waiting";
+
+
+  element.textContent =
+    lyric.text;
+
+
+  fallingLayer.appendChild(
+    element
+  );
+
+
+  const stageWidth =
+    gameStage.clientWidth;
+
+
+  const wordWidth =
+    element.offsetWidth;
+
+
+  const maxX =
+    Math.max(
+      5,
+      stageWidth
+      -
+      wordWidth
+      -
+      10
+    );
+
+
+  const x =
+    Math.random()
+    *
+    maxX;
+
+
+  const word = {
+
+    id:
+      ++wordIdCounter,
+
+    order,
+
+    text:
+      lyric.text,
+
+    spawnTime:
+      lyric.time,
+
+    /*
+      곡별 낙하속도.
+      축배의 노래(1) = 기본 4초
+      속도 2 = 8초
+      속도 0.5 = 2초
+    */
+    fallDuration:
+      CONFIG.limitTime
+      *
+      currentFallSpeed,
+
+    deadlineTime:
+      lyric.time
+      +
+      (
+        CONFIG.limitTime
+        *
+        currentFallSpeed
+      ),
+
+    /*
+      이 가사 때문에 HP가 이미 깎였는지 기록.
+      가사 하나당 HP 패널티는 최대 1번만 적용한다.
+    */
+    penaltyApplied:
+      false,
+
+    x,
+
+    y:
+      -element.offsetHeight,
+
+    element
+
+  };
+
+
+  activeWords.push(
+    word
+  );
+
+
+  updateTargetHighlight();
+
+}
+
+
+
+/* =====================================================
+   REMOVE WORD
+===================================================== */
+
+function removeWordById(
+  id
+) {
+
+  const index =
+    activeWords.findIndex(
+      word =>
+        word.id
+        ===
+        id
+    );
+
+
+  if (
+    index === -1
+  ) {
+
+    return;
+
+  }
+
+
+  const removed =
+    activeWords.splice(
+      index,
+      1
+    )[0];
+
+
+  removed.element.remove();
+
+
+  updateTargetHighlight();
+
+}
+
+
+
+/* =====================================================
+   LEVENSHTEIN
+===================================================== */
+
+function levenshtein(
+  a,
+  b
+) {
+
+  const m =
+    a.length;
+
+  const n =
+    b.length;
+
+
+  const dp =
+    Array.from(
+      {
+        length:
+          m + 1
+      },
+      () =>
+        Array(
+          n + 1
+        ).fill(0)
+    );
+
+
+  for (
+    let i = 0;
+    i <= m;
+    i++
+  ) {
+
+    dp[i][0] =
+      i;
+
+  }
+
+
+  for (
+    let j = 0;
+    j <= n;
+    j++
+  ) {
+
+    dp[0][j] =
+      j;
+
+  }
+
+
+  for (
+    let i = 1;
+    i <= m;
+    i++
+  ) {
+
+    for (
+      let j = 1;
+      j <= n;
+      j++
+    ) {
+
+      const cost =
+        a[i - 1]
+        ===
+        b[j - 1]
+        ?
+        0
+        :
+        1;
+
+
+      dp[i][j] =
+        Math.min(
+
+          dp[i - 1][j]
+          +
+          1,
+
+          dp[i][j - 1]
+          +
+          1,
+
+          dp[i - 1][j - 1]
+          +
+          cost
+
+        );
+
+    }
+
+  }
+
+
+  return dp[m][n];
+
+}
+
+
+
+/* =====================================================
+   JUDGE
+===================================================== */
+
+function judge(
+  typed,
+  target
+) {
+
+  if (
+    typed === target
+  ) {
+
+    return {
+      grade:
+        "PERFECT",
+
+      rate:
+        CONFIG
+          .perfectScoreRate
+    };
+
+  }
+
+
+  if (
+    removeSpaces(typed)
+    ===
+    removeSpaces(target)
+  ) {
+
+    return {
+      grade:
+        "GOOD",
+
+      rate:
+        CONFIG
+          .goodScoreRate
+    };
+
+  }
+
+
+  const distance =
+    levenshtein(
+      removeSpaces(typed),
+      removeSpaces(target)
+    );
+
+
+  if (
+    distance === 1
+  ) {
+
+    return {
+      grade:
+        "PASS",
+
+      rate:
+        CONFIG
+          .passScoreRate
+    };
+
+  }
+
+
+  return {
+    grade:
+      "MISS",
+
+    rate:
+      0
+  };
+
+}
+
+
+
+/* =====================================================
+   HP
+===================================================== */
+
+function loseHp(
+  text
+) {
+
+  hp--;
+
+  combo =
+    0;
+
+
+  if (
+    hp < 0
+  ) {
+
+    hp =
+      0;
+
+  }
+
+
+  updateUI();
+
+
+  showJudgement(
+    "MISS",
+    text
+  );
+
+
+  if (
+    hp <= 0
+  ) {
+
+    endGame(
+      false
+    );
+
+  }
+
+}
+
+
+
+/* =====================================================
+   INPUT
+===================================================== */
+
+function handleSubmit() {
+
+  if (
+    !gameRunning
+  ) {
+
+    return;
+
+  }
+
+
+  const typed =
+    typingInput
+      .value
+      .trim();
+
+
+  if (
+    typed === ""
+  ) {
+
+    return;
+
+  }
+
+
+  const target =
+    getCurrentTarget();
+
+
+  if (
+    !target
+  ) {
+
+    typingInput.value =
+      "";
+
+    return;
+
+  }
+
+
+  /*
+    다음 입력이 제출되는 순간 이전 가사 말풍선을 없앤다.
+    성공 판정이면 아래에서 새 입력값으로 즉시 교체된다.
+  */
+  hideSingerBubble();
+
+
+  const result =
+    judge(
+      typed,
+      target.text
+    );
+
+
+  if (
+    result.grade
+    ===
+    "MISS"
+  ) {
+
+    typingInput.value =
+      "";
+
+
+    /*
+      같은 가사에서 첫 번째 MISS일 때만 HP -1.
+      이미 이 가사 때문에 HP가 깎였다면
+      MISS 판정만 보여주고 추가 차감은 하지 않는다.
+    */
+    if (
+      !target.penaltyApplied
+    ) {
+
+      target.penaltyApplied =
+        true;
+
+
+      loseHp(
+        "다시!"
+      );
+
+    }
+
+    else {
+
+      combo =
+        0;
+
+
+      updateUI();
+
+
+      showJudgement(
+        "MISS",
+        "다시!"
+      );
+
+    }
+
+
+    typingInput.focus();
+
+    return;
+
+  }
+
+
+  const letters =
+    removeSpaces(
+      target.text
+    ).length;
+
+
+  const baseScore =
+    letters
+    *
+    100;
+
+
+  const earned =
+    Math.round(
+      baseScore
+      *
+      result.rate
+    );
+
+
+  score +=
+    earned;
+
+
+  combo++;
+
+
+  updateUI();
+
+
+  showJudgement(
+    result.grade,
+    "+"
+    +
+    earned
+  );
+
+
+  /*
+    정답 처리된 가사는 바로 사라지는 대신
+    성악가 머리 오른쪽 말풍선으로 이어져
+    성악가가 실제로 부르는 것처럼 보이게 한다.
+  */
+  /*
+    PERFECT / GOOD / PASS에서는
+    정답 원문이 아니라 사용자가 실제로 입력한 문구를
+    그대로 말풍선에 보여준다.
+    (MISS는 위에서 return 되므로 여기까지 오지 않음)
+  */
+  showSingerBubble(
+    result.grade,
+    typed
+  );
+
+
+  removeWordById(
+    target.id
+  );
+
+
+  typingInput.value =
+    "";
+
+
+  typingInput.focus();
+
+}
+
+
+
+/* =====================================================
+   SPAWN
+===================================================== */
+
+function spawnLyricsByMusicTime(
+  currentTime
+) {
+
+  while (
+    nextLyricIndex
+    <
+    currentLyricsTimeline.length
+  ) {
+
+    const lyric =
+      currentLyricsTimeline[
+        nextLyricIndex
+      ];
+
+
+    if (
+      currentTime
+      >=
+      lyric.time
+    ) {
+
+      createWord(
+        lyric,
+        nextLyricIndex
+      );
+
+
+      nextLyricIndex++;
+
+    }
+
+    else {
+
+      break;
+
+    }
+
+  }
+
+}
+
+
+
+/* =====================================================
+   FALLING
+===================================================== */
+
+function updateWordPositions(
+  currentTime
+) {
+
+  const stageRect =
+    gameStage
+      .getBoundingClientRect();
+
+
+  const lineRect =
+    missLine
+      .getBoundingClientRect();
+
+
+  const missLineY =
+    lineRect.top
+    -
+    stageRect.top;
+
+
+  for (
+    let i =
+      activeWords.length - 1;
+
+    i >= 0;
+
+    i--
+  ) {
+
+    const word =
+      activeWords[i];
+
+
+    const wordHeight =
+      word.element.offsetHeight;
+
+
+    const startY =
+      -wordHeight;
+
+
+    const endY =
+      missLineY
+      -
+      wordHeight;
+
+
+    const elapsed =
+      currentTime
+      -
+      word.spawnTime;
+
+
+    const progress =
+      Math.max(
+        0,
+        Math.min(
+          1,
+          elapsed
+          /
+          word.fallDuration
+        )
+      );
+
+
+    word.y =
+      startY
+      +
+      (
+        endY
+        -
+        startY
+      )
+      *
+      progress;
+
+
+    word.element.style.transform =
+      `translate3d(
+        ${word.x}px,
+        ${word.y}px,
+        0
+      )`;
+
+
+    if (
+      currentTime
+      >=
+      word.deadlineTime
+    ) {
+
+      const missedText =
+        word.text;
+
+
+      /*
+        먼저 화면에서 가사를 제거한다.
+      */
+      removeWordById(
+        word.id
+      );
+
+
+      /*
+        이 가사에서 아직 HP 패널티를 받은 적이 없을 때만
+        LIMIT MISS로 HP -1.
+
+        이미 타자 MISS로 HP가 깎인 가사라면
+        LIMIT을 넘어도 추가 HP 차감은 없다.
+      */
+      if (
+        !word.penaltyApplied
+      ) {
+
+        word.penaltyApplied =
+          true;
+
+
+        loseHp(
+          missedText
+        );
+
+      }
+
+
+      if (
+        !gameRunning
+      ) {
+
+        return;
+
+      }
+
+    }
+
+  }
+
+}
+
+
+
+/* =====================================================
+   PROGRESS
+===================================================== */
+
+function updateMusicProgress() {
+
+  if (
+    !gameMusic.duration
+
+    ||
+
+    !Number.isFinite(
+      gameMusic.duration
+    )
+  ) {
+
+    return;
+
+  }
+
+
+  const percent =
+    (
+      gameMusic.currentTime
+      /
+      gameMusic.duration
+    )
+    *
+    100;
+
+
+  musicProgress.style.width =
+    percent
+    +
+    "%";
+
+}
+
+
+
+/* =====================================================
+   LOOP
+===================================================== */
+
+function gameLoop() {
+
+  if (
+    !gameRunning
+  ) {
+
+    return;
+
+  }
+
+
+  const currentTime =
+    gameMusic.currentTime;
+
+
+  spawnLyricsByMusicTime(
+    currentTime
+  );
+
+
+  updateWordPositions(
+    currentTime
+  );
+
+
+  updatePhaseMessage(
+    currentTime
+  );
+
+
+  updateMusicProgress();
+
+
+  if (
+    gameRunning
+  ) {
+
+    animationId =
+      requestAnimationFrame(
+        gameLoop
+      );
+
+  }
+
+}
+
+
+
+/* =====================================================
+   CLEAR WORDS
+===================================================== */
+
+function clearWords() {
+
+  activeWords.forEach(
+    word =>
+      word.element.remove()
+  );
+
+
+  activeWords =
+    [];
+
+}
+
+
+
+/* =====================================================
+   START
+===================================================== */
+
+function startGame() {
+
+  /*
+    이전 클리어 박수가 남아 있으면
+    새 게임 시작과 함께 정지.
+  */
+  stopClearSfx();
+
+
+  /*
+    이전 판의 말풍선이 남지 않도록 초기화.
+  */
+  hideSingerBubble();
+
+
+  if (
+    animationId
+  ) {
+
+    cancelAnimationFrame(
+      animationId
+    );
+
+  }
+
+
+  clearWords();
+
+
+  fitStageArt();
+
+
+  hp =
+    CONFIG.maxHp;
+
+
+  score =
+    0;
+
+
+  combo =
+    0;
+
+
+  nextLyricIndex =
+    0;
+
+
+  wordIdCounter =
+    0;
+
+
+  gameRunning =
+    true;
+
+
+  updateUI();
+
+
+  setSingerNormal();
+
+
+  musicProgress.style.width =
+    "0%";
+
+
+  const openingPhase =
+    currentPhaseTimeline.find(
+      phase =>
+        phase.start <= 0
+        &&
+        phase.end > 0
+    );
+
+
+  if (
+    openingPhase
+  ) {
+
+    phaseText.textContent =
+      openingPhase.text;
+
+
+    if (
+      openingPhase.text.length > 6
+    ) {
+
+      phaseText.classList.add(
+        "long"
+      );
+
+    }
+
+    else {
+
+      phaseText.classList.remove(
+        "long"
+      );
+
+    }
+
+
+    phaseLayer.classList.remove(
+      "hidden"
+    );
+
+  }
+
+  else {
+
+    phaseLayer.classList.add(
+      "hidden"
+    );
+
+  }
+
+
+  startOverlay.classList.add(
+    "hidden"
+  );
+
+
+  typingInput.value =
+    "";
+
+
+  gameMusic.pause();
+
+
+  gameMusic.currentTime =
+    0;
+
+
+  gameMusic.volume =
+    0.9;
+
+
+  const playPromise =
+    gameMusic.play();
+
+
+  if (
+    playPromise
+    !==
+    undefined
+  ) {
+
+    playPromise.catch(
+      error => {
+
+        console.error(
+          "음악 재생 오류:",
+          error
+        );
+
+
+        gameRunning =
+          false;
+
+
+        renderErrorMenu(
+          `${selectedSong.audio} 파일을 확인해 주세요.`
+        );
+
+      }
+    );
+
+  }
+
+
+  setTimeout(
+    () => {
+
+      typingInput.focus();
+
+    },
+    100
+  );
+
+
+  animationId =
+    requestAnimationFrame(
+      gameLoop
+    );
+
+}
+
+
+
+/* =====================================================
+   END
+===================================================== */
+
+function endGame(
+  cleared
+) {
+
+  if (
+    !gameRunning
+  ) {
+
+    return;
+
+  }
+
+
+  gameRunning =
+    false;
+
+
+  if (
+    animationId
+  ) {
+
+    cancelAnimationFrame(
+      animationId
+    );
+
+  }
+
+
+  gameMusic.pause();
+
+
+  phaseLayer.classList.add(
+    "hidden"
+  );
+
+
+  setSingerNormal();
+
+
+  hideSingerBubble();
+
+
+  renderResultMenu(
+    cleared
+  );
+
+}
+
+
+
+/* =====================================================
+   MUSIC END
+===================================================== */
+
+gameMusic.addEventListener(
+  "ended",
+  () => {
+
+    if (
+      gameRunning
+    ) {
+
+      playSfx(
+        "clear"
+      );
+
+
+      endGame(
+        true
+      );
+
+    }
+
+  }
+);
+
+
+
+/* =====================================================
+   EVENTS
+===================================================== */
+
+submitBtn.addEventListener(
+  "click",
+  handleSubmit
+);
+
+
+typingInput.addEventListener(
+  "compositionstart",
+  () => {
+
+    isComposing =
+      true;
+
+  }
+);
+
+
+typingInput.addEventListener(
+  "compositionend",
+  () => {
+
+    isComposing =
+      false;
+
+  }
+);
+
+
+typingInput.addEventListener(
+  "keydown",
+  event => {
+
+    if (
+      event.key
+      ===
+      "Enter"
+
+      &&
+
+      !isComposing
+
+      &&
+
+      !event.isComposing
+    ) {
+
+      event.preventDefault();
+
+      handleSubmit();
+
+    }
+
+  }
+);
+
+
+/*
+   ★ 화면 크기가 바뀌면
+   무대 전체를 다시 계산
+*/
+
+window.addEventListener(
+  "resize",
+  fitStageArt
+);
+
+
+window.addEventListener(
+  "orientationchange",
+  () => {
+
+    setTimeout(
+      fitStageArt,
+      100
+    );
+
+  }
+);
+
+
+
+/* =====================================================
+   INITIAL
+===================================================== */
+
+updateUI();
+
+setSingerNormal();
+
+fitStageArt();
+
+renderHomeMenu();
+
+
+</script>
+
+</body>
+</html>
