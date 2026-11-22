@@ -17,6 +17,7 @@ const screen = document.getElementById("screen");
 /* ---------- 유틸 ---------- */
 const clamp = (v, lo = 0, hi = BALANCE.maxStat) => Math.max(lo, Math.min(hi, v));
 const r = v => Math.round(v);
+const wait = ms => new Promise(res => setTimeout(res, ms));
 const esc = s => String(s).replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
 const shuffle = arr => {
   const a = arr.slice();
@@ -56,6 +57,67 @@ function gainMastery(songId, amount) {
 
 function bestSong() {
   return SONG_IDS.reduce((b, id) => (state.run.mastery[id] > state.run.mastery[b] ? id : b), SONG_IDS[0]);
+}
+
+/* =====================================================
+   그림 (파일이 없으면 임시 그림)
+===================================================== */
+function iconHtml(action, size = 40) {
+  const src = ART.icon[action];
+  const inner = artAvailable(src) ? `<img src="${src}" alt="">` : `<span class="emo">${ACTIONS[action].icon}</span>`;
+  return `<span class="ico" style="width:${size}px;height:${size}px;font-size:${Math.round(size * 0.7)}px">${inner}</span>`;
+}
+
+function charImg(pose = "idle", voice = state.voiceType) {
+  const sd = ART.sd(voice, pose);
+  const fb = VOICE_TYPES[voice].images[pose === "sing" ? "perfect" : pose === "sick" ? "miss" : "normal"];
+  return `<img src="${artAvailable(sd) ? sd : fb}" alt="">`;
+}
+
+function sceneArtHtml(kind) {
+  const src = { title: ART.bgTitle, room: ART.bgRoom, practice: ART.bgPractice, lesson: ART.bgLesson }[kind];
+  if (artAvailable(src)) return `<div class="scene-art"><img src="${src}" alt=""></div>`;
+  const name = { title: "타이틀", room: "내 방", practice: "연습실", lesson: "레슨실" }[kind];
+  const ph = kind === "title" ? `<div class="ph-stage"></div>` : `<div class="ph-room ${kind}"></div>`;
+  return `<div class="scene-art">${ph}<span class="ph-label">임시 배경 · ${name}</span></div>`;
+}
+
+function setScene(kind) {
+  const art = document.querySelector("#scene .scene-art");
+  if (art) art.outerHTML = sceneArtHtml(kind);
+}
+
+function setCharPose(pose, motion = "bob") {
+  const c = document.querySelector("#scene .scene-char");
+  if (!c) return;
+  c.className = "scene-char " + motion;
+  c.innerHTML = charImg(pose);
+}
+
+function showSceneBubble(html) {
+  const scene = document.getElementById("scene");
+  if (!scene) return;
+  scene.querySelectorAll(".scene-bubble").forEach(b => b.remove());
+  if (!html) return;
+  const b = document.createElement("div");
+  b.className = "scene-bubble";
+  b.innerHTML = html;
+  scene.appendChild(b);
+}
+
+function floatNums(items) {
+  const scene = document.getElementById("scene");
+  if (!scene) return;
+  items.forEach((it, i) => {
+    const el = document.createElement("div");
+    el.className = "float-num " + (it.cls || "");
+    el.textContent = it.text;
+    el.style.left = (40 + (i % 2) * 18 + Math.random() * 6) + "%";
+    el.style.top = (46 + Math.floor(i / 2) * 13) + "%";
+    el.style.animationDelay = (i * 120) + "ms";
+    scene.appendChild(el);
+    setTimeout(() => el.remove(), 1400 + i * 120);
+  });
 }
 
 /* ---------- 저장 ---------- */
@@ -141,50 +203,82 @@ function newGame(voiceType, name) {
 }
 
 /* =====================================================
-   모달 (Promise로 선택지 반환)
+   모달 · 대화창 (Promise로 선택지 번호 반환)
+   speaker가 있으면 화면 아래 RPG 대화창 + 타자 효과
 ===================================================== */
 const modal = document.getElementById("modal");
 const modalCard = document.getElementById("modalCard");
 
-function showModal({ kicker = "", title = "", body = "", choices = ["확인"], speaker = null, wide = false }) {
+function choiceHtml(choices) {
+  return `<div class="menu-list">${choices.map((c, i) => {
+    const label = typeof c === "string" ? c : c.label;
+    const sub = typeof c === "object" && c.sub ? `<small>${c.sub}</small>` : "";
+    const dis = typeof c === "object" && c.disabled ? "disabled" : "";
+    return `<button class="menu-item" data-i="${i}" ${dis}><span>${label}</span>${sub}</button>`;
+  }).join("")}</div>`;
+}
+
+function showModal({ kicker = "", title = "", body = "", choices = ["확인"], speaker = null, text = "", wide = false }) {
   return new Promise(resolve => {
-    const speakerHtml = speaker
-      ? `<div class="speaker"><span class="speaker-icon">${speaker.icon}</span><span>${esc(speaker.name)}</span></div>`
-      : "";
-    modalCard.className = "modal-card" + (wide ? " wide" : "");
-    modalCard.innerHTML = `
-      ${kicker ? `<div class="kicker">${kicker}</div>` : ""}
-      ${title ? `<h2 class="modal-title">${title}</h2>` : ""}
-      ${speakerHtml}
-      <div class="modal-body">${body}</div>
-      <div class="modal-choices">
-        ${choices.map((c, i) => {
-          const label = typeof c === "string" ? c : c.label;
-          const sub = typeof c === "object" && c.sub ? `<small>${c.sub}</small>` : "";
-          const dis = typeof c === "object" && c.disabled ? "disabled" : "";
-          return `<button class="btn ${i === 0 ? "primary" : ""}" data-i="${i}" ${dis}>${label}${sub}</button>`;
-        }).join("")}
-      </div>`;
+    modal.className = "modal" + (speaker ? " dialog-mode" : "");
+    modalCard.className = "modal-card px-win" + (wide ? " wide" : "");
+
+    if (speaker) {
+      modalCard.innerHTML = `
+        <div class="talk">
+          <div class="portrait-box">${speaker.art && artAvailable(speaker.art) ? `<img src="${speaker.art}" alt="">` : `<span class="emo">${speaker.emo}</span>`}</div>
+          <div>
+            <div class="name-tag">${esc(speaker.name)}</div>
+            <div class="talk-text typing" id="talkText"></div>
+          </div>
+        </div>
+        <div class="modal-choices">${choiceHtml(choices)}</div>`;
+    } else {
+      modalCard.innerHTML = `
+        ${kicker ? `<div class="modal-kicker">${kicker}</div>` : ""}
+        ${title ? `<h2 class="modal-title">${title}</h2>` : ""}
+        <div class="modal-body">${body}</div>
+        <div class="modal-choices">${choiceHtml(choices)}</div>`;
+    }
     modal.hidden = false;
+
+    // 타자 효과
+    let typing = false, timer = null;
+    const box = modalCard.querySelector("#talkText");
+    const finishTyping = () => {
+      clearInterval(timer);
+      typing = false;
+      if (box) { box.textContent = text; box.classList.remove("typing"); }
+    };
+    if (box) {
+      typing = true;
+      let i = 0;
+      const chars = Array.from(text);
+      timer = setInterval(() => {
+        i++;
+        box.textContent = chars.slice(0, i).join("");
+        if (i >= chars.length) finishTyping();
+      }, 28);
+      box.parentElement.parentElement.addEventListener("click", () => { if (typing) finishTyping(); });
+    }
+
     modalCard.querySelectorAll("[data-i]").forEach(b => {
       b.addEventListener("click", () => {
+        if (typing) { finishTyping(); return; }
         modal.hidden = true;
         resolve(Number(b.dataset.i));
       });
     });
-    const first = modalCard.querySelector("button:not([disabled])");
-    if (first) setTimeout(() => first.focus(), 30);
+    const first = modalCard.querySelector(".menu-item:not([disabled])");
+    if (first) setTimeout(() => first.focus({ preventScroll: true }), 30);
   });
 }
 
-async function teacherSays(lines, title = "입시 레슨") {
+const TEACHER = { name: "입시 레슨 선생님", emo: "👩‍🏫", get art() { return ART.teacher; } };
+
+async function teacherSays(lines) {
   for (let i = 0; i < lines.length; i++) {
-    await showModal({
-      kicker: title,
-      speaker: { icon: "👩‍🏫", name: "입시 레슨 선생님" },
-      body: `<p class="dialog">${esc(lines[i])}</p>`,
-      choices: [i < lines.length - 1 ? "다음 ▶" : "알겠어요"]
-    });
+    await showModal({ speaker: TEACHER, text: lines[i], choices: [i < lines.length - 1 ? "다음" : "알겠어요"] });
   }
 }
 
@@ -202,19 +296,26 @@ function playStage(options) {
 ===================================================== */
 function renderTitle() {
   const saved = loadSaved();
+  const chars = Object.keys(VOICE_TYPES).map(v => charImg("idle", v)).join("");
   screen.innerHTML = `
-    <div class="center-view">
-      <div class="title-card">
-        <div class="kicker">OPERA TYPE · 회귀형 육성 시뮬레이션</div>
-        <h1 class="game-title">성악가로<br>살아남기</h1>
-        <div class="chapter">1장 · 입시편</div>
-        <p class="tagline">실력이 바닥나거나 입시에 실패하면 고3 3월로 돌아간다.<br>성악가로 살아남아라.</p>
-        <div class="stack">
-          ${saved ? `<button class="btn primary" id="continueBtn">이어하기 <small>${saved.loop}회차 · ${CALENDAR[saved.run.turn]}</small></button>` : ""}
-          <button class="btn ${saved ? "" : "primary"}" id="newBtn">새 게임</button>
-          <button class="btn" id="importBtn">저장 파일 불러오기</button>
-          ${saved ? `<button class="btn" id="dexBtn">엔딩 도감</button>` : ""}
-          <a class="btn ghost" href="./index.html">← OPERA TYPE 자유 연주</a>
+    <div class="wrap center">
+      <div class="scene title-scene" id="scene">
+        ${sceneArtHtml("title")}
+        <div class="logo">
+          <div class="logo-sub">OPERA TYPE</div>
+          <div class="logo-main">성악가로<br>살아남기</div>
+          <div class="logo-chapter">1장 · 입시편</div>
+        </div>
+        <div class="title-chars">${chars}</div>
+      </div>
+      <div class="px-win">
+        <p class="title-tagline">실력이 바닥나거나 입시에 실패하면<br>고3 3월로 돌아간다. 성악가로 살아남아라.</p>
+        <div class="menu-list">
+          ${saved ? `<button class="menu-item" id="continueBtn"><span>이어하기</span><small>${saved.loop}회차 · ${CALENDAR[saved.run.turn]}</small></button>` : ""}
+          <button class="menu-item" id="newBtn"><span>새 게임</span></button>
+          <button class="menu-item" id="importBtn"><span>저장 파일 불러오기</span></button>
+          ${saved ? `<button class="menu-item" id="dexBtn"><span>엔딩 도감</span></button>` : ""}
+          <a class="menu-item" href="./index.html"><span>OPERA TYPE 자유 연주</span></a>
         </div>
       </div>
     </div>`;
@@ -234,29 +335,27 @@ function renderTitle() {
     renderVoiceSelect();
   };
   document.getElementById("importBtn").onclick = importSave;
+  const first = screen.querySelector(".menu-item");
+  if (first) first.focus({ preventScroll: true });
 }
 
 function renderVoiceSelect() {
   let picked = "tenor";
   const cards = Object.entries(VOICE_TYPES).map(([k, v]) => `
     <button class="voice-card ${k === picked ? "selected" : ""}" data-voice="${k}">
-      <div class="voice-img"><img src="${v.images.normal}" alt=""></div>
-      <div class="voice-name">${v.label}</div>
+      ${charImg("idle", k)}
+      <div class="v-name">${v.label}</div>
     </button>`).join("");
   screen.innerHTML = `
-    <div class="center-view">
-      <div class="panel-card">
-        <div class="kicker">시작</div>
-        <h2 class="section-title">성부 선택</h2>
-        <p class="muted">성부에 따라 캐릭터가 바뀝니다. (메조소프라노·베이스는 그림이 준비되면 추가)</p>
+    <div class="wrap center">
+      <div class="px-win">
+        <div class="win-title">새 게임</div>
+        <h2 class="modal-title">성부를 고르세요</h2>
+        <p class="small muted">메조소프라노·베이스는 그림이 준비되면 추가됩니다.</p>
         <div class="voice-grid">${cards}</div>
-        <label class="field">이름
-          <input id="nameInput" maxlength="8" placeholder="나" autocomplete="off">
-        </label>
-        <div class="row">
-          <button class="btn" id="backBtn">← 처음으로</button>
-          <button class="btn primary" id="goBtn">고3, 3월부터 시작</button>
-        </div>
+        <label class="field">이름 <input id="nameInput" maxlength="8" placeholder="나" autocomplete="off"></label>
+        <button class="px-btn big" id="goBtn">고3, 3월부터 시작 ▶</button>
+        <button class="px-btn sub" id="backBtn">처음으로</button>
       </div>
     </div>`;
   screen.querySelectorAll("[data-voice]").forEach(b => {
@@ -281,12 +380,12 @@ function renderDex(back) {
   }).join("");
   const count = Object.keys(state.endings).length;
   screen.innerHTML = `
-    <div class="center-view">
-      <div class="panel-card wide">
-        <div class="kicker">실패 엔딩도 수집 대상</div>
-        <h2 class="section-title">엔딩 도감 <small>${count} / ${Object.keys(ENDINGS).length}</small></h2>
+    <div class="wrap">
+      <div class="px-win">
+        <div class="win-title">엔딩 도감 ${count} / ${Object.keys(ENDINGS).length}</div>
+        <p class="small muted">실패 엔딩도 수집 대상이다.</p>
         <div class="dex-grid">${items}</div>
-        <div class="row"><button class="btn" id="dexBack">← 돌아가기</button></div>
+        <button class="px-btn sub" id="dexBack" style="margin-top:16px">돌아가기</button>
       </div>
     </div>`;
   document.getElementById("dexBack").onclick = back;
@@ -297,22 +396,23 @@ function renderDex(back) {
 ===================================================== */
 async function resumeTurn() {
   const run = state.run;
+  plan = { weekday: null, weekend: null };
+  renderPlanner();
   if (run.entered !== run.turn) {
     run.entered = run.turn;
     save();
     const ok = await enterTurnEvents();
     if (!ok) return; // 실기/회귀 등으로 흐름이 넘어감
+    renderPlanner();
   }
-  plan = { weekday: null, weekend: null };
-  renderPlanner();
 }
 
 async function enterTurnEvents() {
   const run = state.run;
   const t = run.turn;
 
-  if (state.loop === 1 && TUTORIAL[t]) await teacherSays(TUTORIAL[t]);
   if (state.loop > 1 && t === 0) await showRegressIntro();
+  if (state.loop === 1 && TUTORIAL[t]) await teacherSays(TUTORIAL[t]);
 
   if (t === FIXED_TURNS.mockExam) await mockExam();
   if (t === FIXED_TURNS.announce) await announceAssigned();
@@ -333,7 +433,7 @@ async function showRegressIntro() {
       <p>눈을 뜨니 다시 고3 첫 레슨 날이다. 하지만 이번엔 기억이 남아 있다.</p>
       <ul class="bullets">
         <li>곡 숙련도가 ${r(BALANCE.masteryKeepOnRegress * 100)}% 남아 있다.</li>
-        ${infos.map(i => `<li>${i}</li>`).join("")}
+        ${infos.map(i => `<li>${esc(i)}</li>`).join("")}
       </ul>`,
     choices: ["다시 시작한다"]
   });
@@ -344,7 +444,7 @@ async function mockExam() {
   const intro = state.loop === 1
     ? ["오늘은 모의 실기야. 실제 시험처럼 한 곡을 불러 볼 거야.", "망쳐도 회귀하지 않아. 지금 실력이 어느 정도인지 확인하는 무대야."]
     : ["모의 실기 날이다. 이미 아는 무대지만, 몸은 다시 고3이다."];
-  await teacherSays(intro, "모의 실기");
+  await teacherSays(intro);
 
   const c = await showModal({
     kicker: "모의 실기",
@@ -364,15 +464,16 @@ async function mockExam() {
   const score = finalScore(res, songId);
   gainMastery(songId, 5);
   state.run.voice = clamp(state.run.voice - 5);
-  const comment = !res.cleared ? "무대가 중간에 끊겼네. 괜찮아, 지금은 3월이야."
+  await showModal({
+    kicker: "모의 실기 결과",
+    title: `<span class="big-score">${score}</span>점`,
+    body: resultTable(res)
+  });
+  const comment = !res.cleared ? "무대가 중간에 끊겼네. 괜찮아, 지금은 4월이야."
     : score >= 75 ? "벌써 이 정도면 상위권 학교도 노려볼 만해."
     : score >= 60 ? "나쁘지 않아. 숙련도를 올리면 점수가 확 오를 거야."
     : "처음엔 다 그래. 실력과 숙련도를 같이 올려 보자.";
-  await showModal({
-    kicker: "모의 실기 결과",
-    title: `${score}점`,
-    body: `${resultTable(res)}<p class="dialog">👩‍🏫 ${comment}</p>`
-  });
+  await teacherSays([comment]);
 }
 
 async function announceAssigned() {
@@ -381,25 +482,25 @@ async function announceAssigned() {
   const rows = SCHOOLS.filter(s => s.mode === "assigned").map(s =>
     `<li><b>${s.group}군 ${esc(s.name)}</b> — ${esc(SONGS[state.world.assigned[s.id]].title)}</li>`).join("");
   await showModal({
-    kicker: "7월 하순",
+    kicker: "7월 하순 · 게시판",
     title: "올해 지정곡 공지",
     body: `<ul class="bullets">${rows}</ul>
-      <p class="muted">${known ? "기억하던 그대로다." : "자유곡 학교는 셋 중 숙련도가 가장 높은 곡을 고르면 된다."}</p>`
+      <p class="small muted">${known ? "기억하던 그대로다." : "자유곡 학교는 셋 중 숙련도가 가장 높은 곡을 고르면 된다."}</p>`
   });
 }
 
 async function applySchools() {
-  await teacherSays(["9월이야. 원서를 쓸 때가 됐어. 가·나·다군에 한 곳씩, 총 세 곳에 지원할 수 있어."], "원서 접수");
+  await teacherSays(["9월이야. 원서를 쓸 때가 됐어. 가·나·다군에 한 곳씩, 총 세 곳에 지원할 수 있어."]);
   const applied = {};
   for (const g of GROUPS) {
     const opts = SCHOOLS.filter(s => s.group === g);
     const c = await showModal({
       kicker: `원서 접수 · ${g}군`,
       title: `${g}군 지원 학교`,
-      body: `<p class="muted">합격선은 한 번 시험을 본 학교만 알 수 있다.</p>`,
+      body: `<p class="small muted">합격선은 한 번 시험을 본 학교만 알 수 있다.</p>`,
       choices: opts.map(s => ({
         label: `${s.name} <span class="tag">${s.tier}</span>`,
-        sub: `${schoolSongText(s)} · 합격선 ${state.info.cutoffs[s.id] ? s.cutoff + "점" : "???"}`
+        sub: `${schoolSongText(s)}<br>합격선 ${state.info.cutoffs[s.id] ? s.cutoff + "점" : "???"}`
       }))
     });
     applied[g] = opts[c].id;
@@ -415,7 +516,8 @@ async function coldEvent() {
     await showModal({ kicker: "11월 상순", title: "감기 유행", body: "<p>반 친구들이 줄줄이 감기에 걸렸다. 미리 목을 아껴 둔 덕분에 버텼다.</p>" });
   } else {
     state.run.voice = clamp(v - 35);
-    await showModal({ kicker: "11월 상순", title: "감기 유행", body: "<p>결국 감기에 걸렸다. 목이 크게 상했다. (목 컨디션이 좋았다면 버틸 수 있었을지도…)</p>" });
+    setCharPose("sick", "");
+    await showModal({ kicker: "11월 상순", title: "감기 유행", body: "<p>결국 감기에 걸렸다. 목이 크게 상했다.</p><p class=\"small muted\">(목 컨디션이 좋았다면 버틸 수 있었을지도…)</p>" });
   }
 }
 
@@ -464,114 +566,163 @@ function actionAvailable(key) {
   return true;
 }
 
+function gauge(value, cls, blocks = 20) {
+  const on = Math.round((value / 100) * blocks);
+  return `<div class="gauge ${cls}">${Array.from({ length: blocks }, (_, i) => `<i class="${i < on ? "on" : ""}"></i>`).join("")}</div>`;
+}
+
 function renderPlanner() {
   const run = state.run;
-  const vt = VOICE_TYPES[state.voiceType];
   const vl = voiceLabel(run.voice);
   const turnsLeft = FIXED_TURNS.exam - run.turn;
   const infos = futureInfoList();
 
   const masteryRows = SONG_IDS.map(id => {
     const tags = SCHOOLS.filter(s => s.mode === "assigned" && state.info.assigned && state.world.assigned[s.id] === id)
-      .map(s => `<span class="tag">${s.group}군 지정</span>`).join("");
+      .map(s => `<span class="tag">${s.group}군</span>`).join(" ");
     return `
-      <div class="bar-row">
-        <div class="bar-label">${esc(SONGS[id].title)} ${tags}</div>
-        <div class="bar"><div class="bar-fill mastery" style="width:${run.mastery[id]}%"></div></div>
-        <div class="bar-num">${r(run.mastery[id])}</div>
+      <div class="stat-row song">
+        <div class="stat-name">${esc(SONGS[id].title)} ${tags}</div>
+        ${gauge(run.mastery[id], "mastery", 12)}
+        <div class="stat-num">${r(run.mastery[id])}</div>
       </div>`;
   }).join("");
 
   const appliedHtml = run.applied
-    ? `<div class="info-box"><div class="info-title">지원 학교</div><ul class="bullets">${GROUPS.map(g => {
+    ? `<div class="px-win info-win"><div class="win-title">지원 학교</div><ul class="bullets">${GROUPS.map(g => {
         const s = school(run.applied[g]);
-        return `<li>${g}군 ${esc(s.name)} · ${schoolSongText(s)}</li>`;
+        return `<li>${g}군 <b>${esc(s.name)}</b> · ${schoolSongText(s)}</li>`;
       }).join("")}</ul></div>`
     : "";
 
+  const pose = run.voice < 15 ? "sick" : run.voice < BALANCE.hoarseVoice ? "sick" : "idle";
+
   screen.innerHTML = `
-    <div class="planner">
-      <header class="planner-head">
-        <div>
-          <div class="date">고3 · ${CALENDAR[run.turn]}</div>
-          <div class="muted small">실기까지 ${turnsLeft}턴 (${turnsLeft * 2}주) · 턴 ${run.turn + 1}/${CALENDAR.length}</div>
-        </div>
-        <div class="head-right">
-          ${state.loop > 1 ? `<span class="loop-badge">회귀 ${state.loop}회차</span>` : ""}
-          <button class="icon-btn" id="menuBtn" aria-label="메뉴">☰</button>
-        </div>
-      </header>
-
-      <section class="status">
-        <div class="portrait"><img src="${vt.images.normal}" alt=""><div class="pname">${esc(state.name)} · ${vt.label}</div></div>
-        <div class="stats">
-          <div class="bar-row big">
-            <div class="bar-label">실력</div>
-            <div class="bar"><div class="bar-fill skill" style="width:${run.skill}%"></div></div>
-            <div class="bar-num">${r(run.skill)}</div>
+    <div class="wrap">
+      <div class="scene" id="scene">
+        ${sceneArtHtml("room")}
+        <div class="scene-char bob">${charImg(pose)}</div>
+        <div class="hud">
+          <div class="hud-date">고3 · ${CALENDAR[run.turn]}<small>실기까지 ${turnsLeft}턴 · ${run.turn + 1}/${CALENDAR.length}</small></div>
+          <div class="hud-right">
+            ${state.loop > 1 ? `<span class="loop-badge">회귀 ${state.loop}회차</span>` : ""}
+            <button class="hud-btn" id="menuBtn" aria-label="메뉴">☰</button>
           </div>
-          <div class="voice-state ${vl.cls}">목 상태 <b>${vl.icon} ${vl.text}</b>${run.boost ? ` <span class="tag hot">기분 전환 +50%</span>` : ""}</div>
-          <div class="sub-title">곡 숙련도</div>
-          ${masteryRows}
         </div>
-      </section>
+      </div>
 
-      <section class="slots">
-        ${slotHtml("weekday", "평일")}
-        ${slotHtml("weekend", "주말")}
-      </section>
+      <div class="px-win">
+        <div class="win-title">${esc(state.name)} · ${VOICE_TYPES[state.voiceType].label}</div>
+        <div class="stat-row"><div>실력</div>${gauge(run.skill, "skill")}<div class="stat-num">${r(run.skill)}</div></div>
+        <div class="voice-line">목 상태 <span class="voice-face ${vl.cls}">${vl.icon} ${vl.text}</span>
+          ${run.boost ? `<span class="tag gold">기분 전환 +50%</span>` : ""}</div>
+        <div class="divider"></div>
+        <div class="sec-label">곡 숙련도</div>
+        ${masteryRows}
+      </div>
 
-      <button class="btn primary big" id="advanceBtn" ${plan.weekday && plan.weekend ? "" : "disabled"}>이번 턴 진행 ▶</button>
+      <div class="px-win">
+        <div class="win-title">이번 2주 일정</div>
+        <div class="schedule">
+          ${slotCell("weekday", "평일")}
+          ${slotCell("weekend", "주말")}
+        </div>
+      </div>
+
+      <button class="px-btn big" id="advanceBtn" ${planReady() ? "" : "disabled"}>2주 보내기 ▶</button>
 
       ${appliedHtml}
-      ${infos.length ? `<div class="info-box future"><div class="info-title">🔮 기억 (미래 정보)</div><ul class="bullets">${infos.map(i => `<li>${esc(i)}</li>`).join("")}</ul></div>` : ""}
+      ${infos.length ? `<div class="px-win dark info-win"><div class="win-title" style="background:var(--violet)">🔮 기억 (미래 정보)</div><ul class="bullets">${infos.map(i => `<li>${esc(i)}</li>`).join("")}</ul></div>` : ""}
     </div>`;
 
-  bindSlot("weekday");
-  bindSlot("weekend");
+  screen.querySelectorAll("[data-slot-open]").forEach(b => { b.onclick = () => openSheet(b.dataset.slotOpen); });
   document.getElementById("advanceBtn").onclick = advanceTurn;
   document.getElementById("menuBtn").onclick = openMenu;
 }
 
-function slotHtml(slot, label) {
-  const p = plan[slot];
-  const other = plan[slot === "weekday" ? "weekend" : "weekday"];
-  const cards = Object.entries(ACTIONS).filter(([k]) => actionAvailable(k)).map(([k, a]) => {
-    const blocked = a.oncePerTurn && other && other.action === k;
-    return `<button class="action-card ${p && p.action === k ? "selected" : ""}" data-slot="${slot}" data-action="${k}" ${blocked ? "disabled" : ""}
-      title="${esc(a.desc)}"><span class="a-icon">${a.icon}</span><span class="a-label">${a.label}</span></button>`;
-  }).join("");
-  const needsSong = p && ACTIONS[p.action].needsSong;
-  const songChips = needsSong ? `<div class="song-chips">${SONG_IDS.map(id =>
-    `<button class="chip ${p.song === id ? "selected" : ""}" data-slot="${slot}" data-song="${id}">${esc(SONGS[id].title)}</button>`).join("")}</div>` : "";
-  const desc = p ? `<div class="a-desc">${esc(ACTIONS[p.action].desc)}</div>` : `<div class="a-desc muted">행동 카드를 고르세요</div>`;
-  return `
-    <div class="slot ${p && (!needsSong || p.song) ? "filled" : ""}">
-      <div class="slot-title">${label}</div>
-      <div class="action-grid">${cards}</div>
-      ${songChips}
-      ${desc}
-    </div>`;
+function planReady() {
+  return ["weekday", "weekend"].every(s => plan[s] && (!ACTIONS[plan[s].action].needsSong || plan[s].song));
 }
 
-function bindSlot(slot) {
-  screen.querySelectorAll(`[data-slot="${slot}"][data-action]`).forEach(b => {
-    b.onclick = () => {
-      const action = b.dataset.action;
-      const keepSong = plan[slot] && plan[slot].song;
-      plan[slot] = { action, song: ACTIONS[action].needsSong ? (keepSong || bestSong()) : null };
-      renderPlanner();
-    };
-  });
-  screen.querySelectorAll(`[data-slot="${slot}"][data-song]`).forEach(b => {
-    b.onclick = () => { plan[slot].song = b.dataset.song; renderPlanner(); };
-  });
+function slotCell(slot, label) {
+  const p = plan[slot];
+  if (!p) {
+    return `<button class="slot-cell empty ${slot}" data-slot-open="${slot}">
+      <div class="slot-day">${label}</div><div class="slot-hint">＋ 카드 놓기</div></button>`;
+  }
+  const a = ACTIONS[p.action];
+  return `<button class="slot-cell ${slot}" data-slot-open="${slot}">
+    <div class="slot-day">${label}</div>
+    ${iconHtml(p.action, 40)}
+    <div class="slot-name">${a.label}</div>
+    ${p.song ? `<div class="slot-song">${esc(SONGS[p.song].title)}</div>` : ""}
+  </button>`;
+}
+
+/* ---------- 카드 선택 시트 ---------- */
+const sheetBack = document.getElementById("sheetBack");
+const sheet = document.getElementById("sheet");
+
+function openSheet(slot) {
+  const label = slot === "weekday" ? "평일" : "주말";
+  const other = plan[slot === "weekday" ? "weekend" : "weekday"];
+  let pick = plan[slot] ? { ...plan[slot] } : null;
+
+  const draw = () => {
+    const cards = Object.entries(ACTIONS).filter(([k]) => actionAvailable(k)).map(([k, a]) => {
+      const blocked = (a.oncePerTurn || a.oncePerRun) && other && other.action === k;
+      return `<button class="act-card ${pick && pick.action === k ? "selected" : ""}" data-action="${k}" ${blocked ? "disabled" : ""}>
+        ${iconHtml(k, 40)}<span class="a-name">${a.label}</span><span class="a-fx">${fxText(a)}</span></button>`;
+    }).join("");
+    const needsSong = pick && ACTIONS[pick.action].needsSong;
+    const songs = needsSong ? `
+      <div class="sec-label">곡 고르기</div>
+      <div class="song-pick">${SONG_IDS.map(id => {
+        const tags = SCHOOLS.filter(s => s.mode === "assigned" && state.info.assigned && state.world.assigned[s.id] === id)
+          .map(s => `<span class="tag">${s.group}군</span>`).join("");
+        return `<button class="song-opt ${pick.song === id ? "selected" : ""}" data-song="${id}">
+          <span>${esc(SONGS[id].title)}${tags}</span>${gauge(state.run.mastery[id], "mastery", 10)}<span class="stat-num">${r(state.run.mastery[id])}</span></button>`;
+      }).join("")}</div>` : "";
+    sheet.innerHTML = `
+      <div class="sheet-head"><span class="name-tag">${label}</span> 무엇을 할까?</div>
+      <div class="card-grid">${cards}</div>
+      <div class="desc-box">${pick ? esc(ACTIONS[pick.action].desc) : "카드를 고르세요."}</div>
+      ${songs}
+      <button class="px-btn" id="sheetOk" ${pick && (!needsSong || pick.song) ? "" : "disabled"}>이 카드로 정하기</button>
+      <button class="px-btn sub" id="sheetCancel">닫기</button>`;
+    sheet.querySelectorAll("[data-action]").forEach(b => {
+      b.onclick = () => {
+        const action = b.dataset.action;
+        const keep = pick && pick.song;
+        pick = { action, song: ACTIONS[action].needsSong ? (keep || bestSong()) : null };
+        draw();
+      };
+    });
+    sheet.querySelectorAll("[data-song]").forEach(b => { b.onclick = () => { pick.song = b.dataset.song; draw(); }; });
+    document.getElementById("sheetOk").onclick = () => { plan[slot] = pick; closeSheet(); renderPlanner(); };
+    document.getElementById("sheetCancel").onclick = closeSheet;
+  };
+  draw();
+  sheetBack.hidden = false;
+}
+
+function closeSheet() { sheetBack.hidden = true; }
+sheetBack.addEventListener("click", e => { if (e.target === sheetBack) closeSheet(); });
+
+function fxText(a) {
+  const parts = [];
+  const sign = (v, big) => v > 0 ? "+".repeat(Math.min(3, Math.ceil(v / big))) : "−".repeat(Math.min(3, Math.ceil(-v / big)));
+  if (a === ACTIONS.stage) return "실력·숙련도<br>(실력껏)";
+  if (a.skill) parts.push("실력" + sign(a.skill, 2));
+  if (a.mastery) parts.push("숙련" + sign(a.mastery, 4));
+  if (a.voice) parts.push("목" + sign(a.voice, 10));
+  return parts.join(" ") || "대비";
 }
 
 async function openMenu() {
   const c = await showModal({
     title: "메뉴",
-    body: `<p class="muted">진행은 턴마다 자동 저장됩니다. 브라우저 기록을 지우면 사라질 수 있으니 가끔 내보내 두세요.</p>`,
+    body: `<p class="small muted">진행은 턴마다 자동 저장됩니다. 브라우저 기록을 지우면 사라질 수 있으니 가끔 내보내 두세요.</p>`,
     choices: ["계속하기", "저장 파일 내보내기", "엔딩 도감", "타이틀로"]
   });
   if (c === 1) exportSave();
@@ -580,24 +731,26 @@ async function openMenu() {
 }
 
 /* =====================================================
-   턴 진행
+   턴 진행 (장면 연출 → 결산 → 이벤트)
 ===================================================== */
 async function advanceTurn() {
-  if (busy || !plan.weekday || !plan.weekend) return;
+  if (busy || !planReady()) return;
   busy = true;
   try {
     const run = state.run;
     const log = [];
-    const before = { skill: run.skill, voice: run.voice, mastery: { ...run.mastery } };
+    const before = snapshot();
     let skillGained = false;
     const boost = run.boost ? 1.5 : 1;
     run.boost = false;
+    document.getElementById("advanceBtn").disabled = true;
 
     for (const slot of ["weekday", "weekend"]) {
       const { action, song } = plan[slot];
       const a = ACTIONS[action];
       const f = (run.voice < BALANCE.hoarseVoice ? 0.5 : 1) * boost;
       const slotName = slot === "weekday" ? "평일" : "주말";
+      const pre = snapshot();
 
       if (action === "stage") {
         const p = practiceParams(song);
@@ -609,15 +762,17 @@ async function advanceTurn() {
         gainMastery(song, (4 + res.accuracy * 16) * f);
         gainSkill((1 + res.accuracy * 4) * f);
         skillGained = true;
-        log.push(`${slotName}: ${a.icon} 실전 연습 — ${SONGS[song].title} (정확도 ${r(res.accuracy * 100)}%)`);
+        log.push(`${slotName}: 실전 연습 — ${SONGS[song].title} (정확도 ${r(res.accuracy * 100)}%)`);
       } else {
         if (a.skill > 0) { gainSkill(a.skill * f); skillGained = true; }
         else if (a.skill < 0) gainSkill(a.skill);
         if (a.mastery && song) gainMastery(song, a.mastery * f);
         if (action === "backup") run.backup = true;
-        log.push(`${slotName}: ${a.icon} ${a.label}${song ? ` — ${SONGS[song].title}` : ""}`);
+        log.push(`${slotName}: ${a.label}${song ? ` — ${SONGS[song].title}` : ""}`);
       }
       run.voice = clamp(run.voice + a.voice);
+
+      await playMontage(slotName, action, song, pre);
     }
 
     if (!skillGained) {
@@ -636,7 +791,7 @@ async function advanceTurn() {
 
     if (run.skill <= 0) { await regress("slump"); return; }
 
-    // 랜덤 이벤트 (튜토리얼 기간·고정 이벤트 직전 제외)
+    // 랜덤 이벤트 (튜토리얼 기간·실기 직전 제외)
     if (run.turn >= 2 && run.turn < FIXED_TURNS.exam - 1 && Math.random() < BALANCE.eventChance) {
       await randomEvent();
       if (run.skill <= 0) { await regress("slump"); return; }
@@ -651,6 +806,31 @@ async function advanceTurn() {
   }
 }
 
+function snapshot() {
+  return { skill: state.run.skill, voice: state.run.voice, mastery: { ...state.run.mastery } };
+}
+
+/* 장면: 배경 전환 + 캐릭터 동작 + 숫자가 떠오름 */
+async function playMontage(slotName, action, song, pre) {
+  const run = state.run;
+  setScene(ACTION_SCENE[action]);
+  setCharPose(action === "rest" ? "rest" : (action === "theory" || action === "backup") ? "idle" : "sing", action === "rest" ? "bob" : "act");
+  showSceneBubble(`${iconHtml(action, 24)}${slotName} · ${ACTIONS[action].label}`);
+  const items = [];
+  const ds = r(run.skill) - r(pre.skill);
+  if (ds) items.push({ text: `실력 ${ds > 0 ? "+" : ""}${ds}`, cls: ds < 0 ? "minus" : "" });
+  if (song) {
+    const dm = r(run.mastery[song]) - r(pre.mastery[song]);
+    if (dm) items.push({ text: `숙련 ${dm > 0 ? "+" : ""}${dm}`, cls: "" });
+  }
+  const dv = r(run.voice) - r(pre.voice);
+  if (dv) items.push({ text: dv > 0 ? "목 회복" : "목 −", cls: dv > 0 ? "voice" : "minus" });
+  await wait(250);
+  floatNums(items);
+  await wait(1150);
+  showSceneBubble(null);
+}
+
 function diffHtml(before) {
   const run = state.run;
   const d = (a, b) => {
@@ -663,7 +843,7 @@ function diffHtml(before) {
     if (x) items.push(`${esc(SONGS[id].title)} ${r(run.mastery[id])} ${x}`);
   });
   const vl = voiceLabel(run.voice);
-  items.push(`목 상태 ${vl.icon} ${vl.text}`);
+  items.push(`목 ${vl.icon} ${vl.text}`);
   return `<div class="diff">${items.map(i => `<span>${i}</span>`).join("")}</div>`;
 }
 
@@ -676,7 +856,7 @@ async function randomEvent() {
     effect = ev.choices[c].effect;
     resultText = ev.choices[c].result;
   }
-  const before = { skill: state.run.skill, voice: state.run.voice, mastery: { ...state.run.mastery } };
+  const before = snapshot();
   applyEffect(effect);
   await showModal({
     kicker: "이벤트",
@@ -737,10 +917,8 @@ function resultTable(res) {
 ===================================================== */
 async function finalExams() {
   const run = state.run;
-  if (!run.applied) { // 저장 파일 손상 등 예외
-    await applySchools();
-  }
-  await teacherSays(["드디어 실기야. 지금까지 한 만큼만 보여 주면 돼.", "가·나·다군 순서대로 세 번 무대에 선다. 결과는 마지막에 한꺼번에 발표돼."], "실기 시험");
+  if (!run.applied) await applySchools(); // 저장 파일 손상 등 예외
+  await teacherSays(["드디어 실기야. 지금까지 한 만큼만 보여 주면 돼.", "가·나·다군 순서대로 세 번 무대에 선다. 결과는 마지막에 한꺼번에 발표돼."]);
 
   const results = [];
   for (const g of GROUPS) {
@@ -774,7 +952,7 @@ async function finalExams() {
     await showModal({
       kicker: `${g}군 실기 종료`,
       title: esc(s.name),
-      body: `${resultTable(res)}<p class="muted">결과는 합격자 발표일에 확인할 수 있다.</p>`,
+      body: `${resultTable(res)}<p class="small muted">결과는 합격자 발표일에 확인할 수 있다.</p>`,
       choices: [g === "다" ? "합격자 발표 보기" : "다음 학교로"]
     });
   }
@@ -783,9 +961,9 @@ async function finalExams() {
   results.forEach(x => { state.info.cutoffs[x.school.id] = true; });
   const rows = results.map(x => `
     <div class="announce-row ${x.passed ? "pass" : "fail"}">
-      <div><b>${x.school.group}군 ${esc(x.school.name)}</b><div class="muted small">${esc(SONGS[x.songId].title)}${x.res.cleared ? "" : " · 무대 중단"}</div></div>
-      <div class="announce-score">${x.score}점 <small>/ 합격선 ${x.school.cutoff}</small></div>
-      <div class="announce-verdict">${x.passed ? "합격" : "불합격"}</div>
+      <div><b>${x.school.group}군 ${esc(x.school.name)}</b><div class="small muted">${esc(SONGS[x.songId].title)}${x.res.cleared ? "" : " · 무대 중단"}</div></div>
+      <div class="announce-score">${x.score}점 <small>/ ${x.school.cutoff}</small></div>
+      <div class="stamp">${x.passed ? "합격" : "불합격"}</div>
     </div>`).join("");
   await showModal({ kicker: "1월 말", title: "합격자 발표", body: `<div class="announce">${rows}</div>`, wide: true });
 
@@ -811,17 +989,21 @@ async function clearChapter(result) {
   save();
   const e = ENDINGS[s.id];
   screen.innerHTML = `
-    <div class="center-view">
-      <div class="panel-card ending success">
-        <div class="kicker">1장 입시편 클리어 · ${state.loop}회차</div>
-        <h2 class="section-title">${esc(e.title)}</h2>
+    <div class="wrap center">
+      <div class="scene" id="scene">
+        ${sceneArtHtml("title")}
+        <div class="scene-char act" style="left:50%">${charImg("sing")}</div>
+      </div>
+      <div class="px-win">
+        <div class="win-title">1장 입시편 클리어 · ${state.loop}회차</div>
+        <h2 class="modal-title">${esc(e.title)}</h2>
         <p>${esc(e.text)}</p>
-        <div class="info-box"><div class="info-title">대학편 시작 보너스</div><p>${esc(s.bonus)}</p></div>
-        <p class="muted">2장 대학편은 준비 중입니다. 더 높은 학교를 노리고 싶다면 스스로 회귀할 수 있다.</p>
-        <div class="stack">
-          <button class="btn primary" id="selfRegressBtn">회귀해서 다시 도전</button>
-          <button class="btn" id="dexBtn2">엔딩 도감</button>
-          <button class="btn ghost" id="titleBtn">타이틀로</button>
+        <div class="desc-box"><b>대학편 시작 보너스</b><br>${esc(s.bonus)}</div>
+        <p class="small muted">2장 대학편은 준비 중입니다. 더 높은 학교를 노리고 싶다면 스스로 회귀할 수 있다.</p>
+        <div class="menu-list">
+          <button class="menu-item" id="selfRegressBtn"><span>회귀해서 다시 도전</span></button>
+          <button class="menu-item" id="dexBtn2"><span>엔딩 도감</span></button>
+          <button class="menu-item" id="titleBtn"><span>타이틀로</span></button>
         </div>
       </div>
     </div>`;
@@ -841,7 +1023,7 @@ async function regress(cause) {
   await showModal({
     kicker: `실패 엔딩${first ? " · 도감에 새로 등록" : ""}`,
     title: esc(e.title),
-    body: `<p>${esc(e.text)}</p><p class="regress-text">…그리고 눈앞이 하얘졌다.</p>`,
+    body: `<p>${esc(e.text)}</p><p class="small" style="color:var(--violet);margin-top:12px">…그리고 눈앞이 하얘졌다.</p>`,
     choices: ["회귀한다"]
   });
   startNextLoop();
@@ -856,4 +1038,4 @@ function startNextLoop() {
 
 /* ---------- 시작 ---------- */
 Stage.init();
-renderTitle();
+preloadArt(Object.keys(VOICE_TYPES)).then(renderTitle);

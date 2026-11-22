@@ -3,6 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="theme-color" content="#2a1c3d">
 <title>성악가로 살아남기</title>
 <link rel="stylesheet" href="./survive/opera-stage.css">
 <link rel="stylesheet" href="./survive/style.css">
@@ -63,12 +64,18 @@
   </div>
 </div>
 
+<!-- 행동 카드 선택 시트 -->
+<div class="sheet-back" id="sheetBack" hidden>
+  <div class="sheet px-win" id="sheet"></div>
+</div>
+
 <!-- 대화 · 이벤트 · 결과 모달 -->
 <div class="modal" id="modal" hidden>
   <div class="modal-card" id="modalCard"></div>
 </div>
 
 <script src="./survive/data.js"></script>
+<script src="./survive/art.js"></script>
 <script src="./survive/stage.js"></script>
 <script src="./survive/game.js"></script>
 </body>
