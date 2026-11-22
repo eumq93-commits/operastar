@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>성악가로 살아남기</title>
+<link rel="stylesheet" href="./survive/opera-stage.css">
+<link rel="stylesheet" href="./survive/style.css">
+</head>
+<body>
+
+<!-- 타이틀 · 계획 · 결과 화면이 그려지는 곳 -->
+<main id="screen"></main>
+
+<!-- 무대 (OPERA TYPE 엔진) -->
+<audio id="stageMusic" preload="auto"></audio>
+
+<div class="stage-screen" id="stageScreen" hidden>
+  <div class="app">
+
+    <div class="stage-header">
+      <span id="stageLabel"></span>
+      <button id="quitStageBtn" type="button">중단</button>
+    </div>
+
+    <div class="top-ui">
+      <div class="panel"><div class="label">HP</div><div class="value" id="hpValue">5</div></div>
+      <div class="panel"><div class="label">SCORE</div><div class="value" id="scoreValue">0</div></div>
+      <div class="panel"><div class="label">COMBO</div><div class="value" id="comboValue">0</div></div>
+    </div>
+
+    <div class="game-stage" id="gameStage">
+
+      <div class="stage-art" id="stageArt">
+        <img src="./bg-stage-back.png" class="stage-bg" alt="">
+        <div class="orchestra-anchor"><img src="./orchestra.png" class="orchestra" alt=""></div>
+        <div class="singer-anchor">
+          <div class="singer-motion state-normal" id="singerMotion">
+            <img src="./singer-normal.png" class="singer-image" id="singerImage" alt="">
+          </div>
+          <div class="singer-bubble" id="singerBubble" aria-hidden="true"><span id="singerBubbleText"></span></div>
+        </div>
+      </div>
+
+      <div class="music-bar"><div class="music-progress" id="musicProgress"></div></div>
+      <div class="falling-layer" id="fallingLayer"></div>
+      <div class="miss-line" id="missLine"><div class="miss-line-label">LIMIT</div></div>
+      <div class="phase-layer hidden" id="phaseLayer"><div class="phase-text" id="phaseText"></div></div>
+      <div class="judgement-layer" id="judgementLayer">
+        <div class="judgement-main" id="judgementMain"></div>
+        <div class="judgement-sub" id="judgementSub"></div>
+      </div>
+
+      <div class="bottom-overlay">
+        <div class="input-row">
+          <input id="typingInput" class="typing-input" type="text" placeholder="떨어지는 가사를 입력하세요"
+                 autocomplete="off" autocapitalize="off" spellcheck="false" enterkeyhint="done">
+          <button id="submitBtn" class="submit-btn" type="button">입력</button>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<!-- 대화 · 이벤트 · 결과 모달 -->
+<div class="modal" id="modal" hidden>
+  <div class="modal-card" id="modalCard"></div>
+</div>
+
+<script src="./survive/data.js"></script>
+<script src="./survive/stage.js"></script>
+<script src="./survive/game.js"></script>
+</body>
+</html>
