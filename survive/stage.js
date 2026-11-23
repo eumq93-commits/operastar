@@ -12,6 +12,8 @@
      lookahead,       // 아직 안 떨어진 다음 가사를 미리 쳐도 인정하는 줄 수
      preview,         // 화면 위에 미리 보여 줄 다음 가사 줄 수
      tierName,        // 여유도 이름 (급박/빠듯/여유/완벽)
+     typeMode,        // "ko" 한글 발음 / "orig" 원어
+     transpose,       // 칩튠 곡 조옮김 (성부에 맞게)
      voiceLevel,      // "ok" | "hoarse" | "bad"  (목 상태 → 가사 흔들림)
      images,          // 성부별 캐릭터 이미지
      allowQuit,       // 중단 버튼 표시
@@ -39,6 +41,7 @@ const Stage = (() => {
   let counts = { PERFECT: 0, GOOD: 0, PASS: 0, MISS: 0 };
   let running = false, rafId = null, wordId = 0, composing = false;
   let fakeClockStart = null; // 음악 재생 실패 시 타이머로 대신 진행
+  let useChip = false;       // 악보 곡은 칩튠 플레이어가 시계 역할
   let presung = new Set();   // 미리 쳐서 이미 부른 가사 번호
   let previewCache = "";
   let timers = {};
@@ -94,6 +97,7 @@ const Stage = (() => {
   }
 
   function now() {
+    if (useChip) return Chip.time();
     if (fakeClockStart !== null) return (performance.now() - fakeClockStart) / 1000;
     return el.stageMusic.currentTime;
   }
@@ -158,7 +162,12 @@ const Stage = (() => {
     return dp[m][n];
   }
 
+  /* 원어 입력: 대소문자·악센트·문장부호는 따지지 않는다 (ü → u) */
+  const loose = t => t.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase()
+    .replace(/[^\p{L}\p{N}\s]/gu, "").replace(/\s+/g, " ").trim();
+
   function judge(typed, target) {
+    if (opts.normalize) { typed = loose(typed); target = loose(target); }
     if (typed === target) return { grade: "PERFECT", rate: 1 };
     if (noSpace(typed) === noSpace(target)) return { grade: "GOOD", rate: 0.8 };
     const d = levenshtein(noSpace(typed), noSpace(target));
@@ -323,14 +332,16 @@ const Stage = (() => {
 
     updatePhase(t);
 
-    const total = opts.endTime || el.stageMusic.duration || endPoint();
+    const total = opts.endTime || (useChip ? opts.song.duration : el.stageMusic.duration) || endPoint();
     if (total && Number.isFinite(total)) {
       el.musicProgress.style.width = Math.min(100, (t / total) * 100) + "%";
     }
 
     // 정해진 구간을 다 불렀으면 클리어
     if (nextIndex >= lyrics.length && activeWords.length === 0 &&
-        (opts.endTime ? t >= Math.min(opts.endTime, lastDeadline()) : fakeClockStart !== null && t >= endPoint())) {
+        (opts.endTime ? t >= Math.min(opts.endTime, lastDeadline())
+          : useChip ? t >= Math.min(opts.song.duration, lastDeadline())
+          : fakeClockStart !== null && t >= endPoint())) {
       finish(true);
       return;
     }
@@ -350,7 +361,11 @@ const Stage = (() => {
   /* ---------- 시작 / 종료 ---------- */
   function play(options) {
     opts = Object.assign({ timeMult: 1, hp: 5, typoTolerance: 1, lookahead: 0, preview: 0, voiceLevel: "ok", allowQuit: true }, options);
-    lyrics = opts.song.lyrics.filter(l => !opts.endTime || l.time < opts.endTime - 2);
+    // 가사 입력 방식: 한글 발음(text) 또는 원어(orig)
+    lyrics = opts.song.lyrics
+      .filter(l => !opts.endTime || l.time < opts.endTime - 2)
+      .map(l => ({ time: l.time, text: opts.typeMode === "orig" && l.orig ? l.orig : l.text }));
+    opts.normalize = opts.typeMode === "orig";
 
     activeWords.forEach(w => w.element.remove());
     activeWords = [];
@@ -375,6 +390,13 @@ const Stage = (() => {
     el.typingInput.value = "";
 
     running = true;
+    useChip = !!opts.song.chip;
+    if (useChip) {
+      Chip.play(opts.song, { transpose: opts.transpose || 0, end: opts.endTime || opts.song.duration });
+      setTimeout(() => el.typingInput.focus(), 100);
+      rafId = requestAnimationFrame(loop);
+      return;
+    }
     const m = el.stageMusic;
     m.src = opts.song.audio;
     m.currentTime = 0;
@@ -395,6 +417,7 @@ const Stage = (() => {
     running = false;
     cancelAnimationFrame(rafId);
     el.stageMusic.pause();
+    if (useChip) Chip.stop();
     el.phaseLayer.classList.add("hidden");
     hideBubble();
     if (cleared) playSfx("clear");

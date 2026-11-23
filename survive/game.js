@@ -5,9 +5,29 @@
 
 const SAVE_KEY = "operastar-survive-v1";
 const SAVE_VERSION = 1;
-const ALL_SONG_IDS = Object.keys(SONGS);
-/* 내 성부가 부를 수 있는 곡 */
-const songsFor = voice => ALL_SONG_IDS.filter(id => SONGS[id].voices.includes(voice));
+let ALL_SONG_IDS = Object.keys(SONGS);
+/* 내 성부가 부를 수 있는 입시곡 */
+const songsFor = voice => ALL_SONG_IDS.filter(id => SONGS[id].voices.includes(voice) && SONGS[id].level === "입시");
+
+/* 악보에서 변환한 칩튠 곡(survive/songs/*.js)을 불러와 곡 목록에 더한다 */
+function loadScript(src) {
+  return new Promise(res => {
+    const el = document.createElement("script");
+    el.src = src;
+    el.onload = () => res(true);
+    el.onerror = () => res(false);
+    document.head.appendChild(el);
+  });
+}
+window.CHIP_SONGS = [];
+async function loadChipSongs() {
+  if (!(await loadScript("./survive/songs/index.js")) || typeof CHIP_SONG_IDS === "undefined") return;
+  await Promise.all(CHIP_SONG_IDS.map(id => loadScript(`./survive/songs/${id}.js`)));
+  CHIP_SONGS.forEach(c => {
+    SONGS[c.id] = Object.assign({ fallSpeed: 1.2 }, c);
+  });
+  ALL_SONG_IDS = Object.keys(SONGS);
+}
 const GROUPS = ["가", "나", "다"];
 
 let state = null;          // 저장되는 전체 상태
@@ -132,9 +152,17 @@ function loadSaved() {
     const raw = localStorage.getItem(SAVE_KEY);
     if (!raw) return null;
     const data = JSON.parse(raw);
-    return validSave(data) ? data : null;
+    return validSave(data) ? migrate(data) : null;
   } catch (e) { return null; }
 }
+/* 예전 저장 파일에 새 곡·설정 칸을 채운다 */
+function migrate(d) {
+  ALL_SONG_IDS.forEach(id => { if (typeof d.run.mastery[id] !== "number") d.run.mastery[id] = 0; });
+  d.settings = Object.assign({ typeMode: "ko", bgm: true }, d.settings || {});
+  if (!d.gender) d.gender = VOICE_TYPES[d.voiceType].gender;
+  return d;
+}
+
 function validSave(d) {
   return d && d.version === SAVE_VERSION && d.run && VOICE_TYPES[d.voiceType] && d.world && d.info;
 }
@@ -157,7 +185,7 @@ function importSave() {
       try {
         const d = JSON.parse(text);
         if (!validSave(d)) throw new Error("bad");
-        state = d;
+        state = migrate(d);
         save();
         resumeTurn();
       } catch (e) {
@@ -200,6 +228,7 @@ function newGame(voiceType, name) {
     world: { assigned },            // 회귀해도 같은 해 → 지정곡은 그대로
     info: { assigned: false, cold: false, accompanist: false, cutoffs: {} }, // 회귀해도 남는 기억
     endings: {},
+    settings: { typeMode: "ko", bgm: true },
     run: newRun(null)
   };
   save();
@@ -287,6 +316,7 @@ async function teacherSays(lines) {
 }
 
 function playStage(options) {
+  bgmSong = null; // 무대가 끝나면 배경음악을 다시 튼다
   return new Promise(resolve => {
     Stage.play(Object.assign({}, options, {
       images: VOICE_TYPES[state.voiceType].images,
@@ -592,7 +622,10 @@ function renderPlanner() {
   const turnsLeft = FIXED_TURNS.exam - run.turn;
   const infos = futureInfoList();
 
-  const masteryRows = mySongs().map(id => {
+  const assignedIds = state.info.assigned ? Object.values(state.world.assigned) : [];
+  const shown = mySongs().filter(id => run.mastery[id] >= 0.5 || assignedIds.includes(id))
+    .sort((a, b) => run.mastery[b] - run.mastery[a]);
+  const masteryRows = shown.length ? shown.map(id => {
     const tags = SCHOOLS.filter(s => s.mode === "assigned" && state.info.assigned && state.world.assigned[s.id] === id)
       .map(s => `<span class="tag">${s.group}군</span>`).join(" ");
     return `
@@ -601,7 +634,7 @@ function renderPlanner() {
         ${gauge(run.mastery[id], "mastery", 12)}
         <div class="stat-num">${r(run.mastery[id])}</div>
       </div>`;
-  }).join("");
+  }).join("") : `<p class="small muted">아직 연습한 곡이 없어요. 일정 칸에서 곡을 골라 연습하세요. (입시곡 ${mySongs().length}곡)</p>`;
 
   const appliedHtml = run.applied
     ? `<div class="px-win info-win"><div class="win-title">지원 학교</div><ul class="bullets">${GROUPS.map(g => {
@@ -621,6 +654,7 @@ function renderPlanner() {
           <div class="hud-date">고3 · ${CALENDAR[run.turn]}<small>실기까지 ${turnsLeft}턴 · ${run.turn + 1}/${CALENDAR.length}</small></div>
           <div class="hud-right">
             ${state.loop > 1 ? `<span class="loop-badge">회귀 ${state.loop}회차</span>` : ""}
+            <button class="hud-btn" id="bgmBtn" aria-label="배경음악">${state.settings.bgm ? "♪" : "×"}</button>
             <button class="hud-btn" id="menuBtn" aria-label="메뉴">☰</button>
           </div>
         </div>
@@ -653,6 +687,13 @@ function renderPlanner() {
   screen.querySelectorAll("[data-slot-open]").forEach(b => { b.onclick = () => openSheet(b.dataset.slotOpen); });
   document.getElementById("advanceBtn").onclick = advanceTurn;
   document.getElementById("menuBtn").onclick = openMenu;
+  document.getElementById("bgmBtn").onclick = () => {
+    state.settings.bgm = !state.settings.bgm;
+    save();
+    if (!state.settings.bgm) { Chip.stop(); bgmSong = null; }
+    renderPlanner();
+  };
+  startBgm();
 }
 
 function planReady() {
@@ -738,11 +779,18 @@ async function openMenu() {
   const c = await showModal({
     title: "메뉴",
     body: `<p class="small muted">진행은 턴마다 자동 저장됩니다. 브라우저 기록을 지우면 사라질 수 있으니 가끔 내보내 두세요.</p>`,
-    choices: ["계속하기", "저장 파일 내보내기", "엔딩 도감", "타이틀로"]
+    choices: ["계속하기", "저장 파일 내보내기", "엔딩 도감",
+      { label: "가사 입력 방식", sub: state.settings.typeMode === "orig" ? "원어 (Caro mio ben)" : "한글 발음 (까로 미오 벤)" },
+      "타이틀로"]
   });
   if (c === 1) exportSave();
   if (c === 2) renderDex(renderPlanner);
-  if (c === 3) renderTitle();
+  if (c === 3) {
+    state.settings.typeMode = state.settings.typeMode === "orig" ? "ko" : "orig";
+    save();
+    openMenu();
+  }
+  if (c === 4) { Chip.stop(); bgmSong = null; renderTitle(); }
 }
 
 /* =====================================================
@@ -922,8 +970,23 @@ function stageParams(songId, schoolSpeed = 1) {
 function stageOpts(songId, p) {
   return {
     timeMult: p.timeMult, hp: p.hp, typoTolerance: p.typo, lookahead: p.lookahead,
-    preview: p.preview, tierName: p.tierName, voiceLevel: voiceLevel(state.run.voice)
+    preview: p.preview, tierName: p.tierName, voiceLevel: voiceLevel(state.run.voice),
+    typeMode: state.settings.typeMode, transpose: Chip.transposeFor(SONGS[songId], state.voiceType)
   };
+}
+
+/* ---------- 계획 화면 배경음악: 내 성부 곡을 칩튠으로 조용히 반복 ---------- */
+let bgmSong = null;
+function startBgm() {
+  if (!state.settings.bgm) return;
+  const pool = mySongs().filter(id => SONGS[id].chip);
+  if (!pool.length) return;
+  const id = pool.reduce((b, x) => (state.run.mastery[x] > state.run.mastery[b] ? x : b), pool[0]);
+  if (bgmSong === id && Chip.playing()) return;
+  const song = SONGS[id];
+  bgmSong = id;
+  Chip.play(song, { transpose: Chip.transposeFor(song, state.voiceType), volume: 0.45, loop: true,
+    start: 0, end: Math.min(song.duration, 48) });
 }
 
 function finalScore(res, songId) {
@@ -1065,4 +1128,4 @@ function startNextLoop() {
 
 /* ---------- 시작 ---------- */
 Stage.init();
-preloadArt(Object.keys(VOICE_TYPES)).then(renderTitle);
+Promise.all([preloadArt(Object.keys(VOICE_TYPES)), loadChipSongs()]).then(renderTitle);
