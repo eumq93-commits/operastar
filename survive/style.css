@@ -667,6 +667,30 @@ img { image-rendering: pixelated; }
 .stage-screen .singer-bubble::after { display: none; }
 .stage-screen .music-progress { background: var(--gold); }
 
+.stage-header #stageLabel { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.tier-badge { padding: 2px 6px; font-size: 11px; color: var(--ink); background: var(--cream); box-shadow: 0 0 0 2px var(--ink); white-space: nowrap; }
+.tier-badge[hidden] { display: none; }
+.tier-badge.tier-급박 { background: var(--red); color: var(--cream); animation: cursorBlink .4s steps(2) infinite; }
+.tier-badge.tier-빠듯 { background: var(--gold); }
+.tier-badge.tier-여유 { background: var(--mint); }
+.tier-badge.tier-완벽 { background: var(--sky); }
+.lyric-preview {
+  position: absolute;
+  left: 8px; right: 8px; top: 10px;
+  z-index: 9;
+  padding: 4px 8px;
+  background: rgba(27, 16, 36, .72);
+  color: var(--cream);
+  font-size: 13px;
+  font-weight: 700;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  box-shadow: 0 0 0 2px var(--ink);
+  pointer-events: none;
+}
+.lyric-preview[hidden] { display: none; }
+
 /* 목 상태가 나쁘면 가사가 흔들리고 흐려진다 */
 .word.shaky { animation: wordShake .28s steps(2) infinite; }
 .word.blurry { filter: blur(1.4px); }
@@ -680,3 +704,78 @@ img { image-rendering: pixelated; }
   .talk { grid-template-columns: 56px 1fr; }
   .portrait-box { width: 56px; height: 56px; font-size: 32px; }
 }
+
+/* ---------- 미니게임 ---------- */
+.mini-screen {
+  position: fixed;
+  inset: 0;
+  z-index: 180;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  background: rgba(27, 16, 36, .82);
+}
+.mini-card { width: min(100%, 440px); }
+.mini-head { font-size: 17px; font-weight: 700; margin-bottom: 6px; }
+.mini-desc { font-size: 13px; line-height: 1.6; margin-bottom: 12px; }
+.mini-stat { font-size: 13px; margin-bottom: 8px; }
+.mini-stat b { display: block; font-size: 22px; color: var(--wine); }
+.row-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+
+.breath-wrap { display: grid; grid-template-columns: 80px 1fr; gap: 16px; align-items: stretch; margin-bottom: 12px; }
+.breath-track {
+  position: relative;
+  height: 220px;
+  background: var(--ink);
+  box-shadow: 0 0 0 3px var(--ink);
+  background-image: repeating-linear-gradient(0deg, #2a1c3d 0 10px, #241833 10px 20px);
+}
+.breath-zone { position: absolute; left: 0; right: 0; background: rgba(245, 194, 76, .45); box-shadow: inset 0 3px 0 var(--gold), inset 0 -3px 0 var(--gold); }
+.breath-mark { position: absolute; left: -6px; right: -6px; height: 8px; background: var(--pink); box-shadow: 0 0 0 2px var(--ink); }
+.breath-mark.ok { background: var(--mint); }
+.hold-btn { user-select: none; -webkit-user-select: none; touch-action: none; }
+.hold-btn.pressed { background: var(--mint); transform: translateY(2px); }
+
+.sol-status { min-height: 1.6em; margin-bottom: 10px; font-weight: 700; text-align: center; }
+.sol-keys { display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px; margin-bottom: 12px; }
+.sol-key {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 2px;
+  height: 110px;
+  padding-bottom: 8px;
+  border: 0;
+  background: #fffaf0;
+  color: var(--ink);
+  font-size: 16px;
+  font-weight: 700;
+  cursor: pointer;
+  box-shadow: 0 0 0 3px var(--ink), inset 0 -10px 0 var(--key);
+  touch-action: manipulation;
+}
+.sol-key small { font-size: 10px; opacity: .6; }
+.sol-key.lit { background: var(--key); color: var(--cream); transform: translateY(3px); }
+.sol-key[disabled] { cursor: default; }
+.sol-progress { display: flex; justify-content: center; gap: 8px; margin-bottom: 12px; }
+.sol-progress i { width: 18px; height: 18px; background: #3b2a4d; box-shadow: 0 0 0 2px var(--ink); }
+.sol-progress i.on { background: var(--gold); }
+
+/* 성별 선택 */
+.seg { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin: 6px 0 4px; }
+.seg button {
+  min-height: 40px;
+  border: 0;
+  background: #fffaf0;
+  color: var(--ink);
+  font-size: 15px;
+  font-weight: 700;
+  cursor: pointer;
+  box-shadow: 0 0 0 3px var(--ink);
+}
+.seg button.on { background: var(--gold); }
+.voice-card .borrow { font-family: "Galmuri9", var(--font); font-size: 9px; margin-top: 3px; opacity: .75; }
+.field { white-space: nowrap; }
+.field input { min-width: 0; width: 100%; }

@@ -5,7 +5,9 @@
 
 const SAVE_KEY = "operastar-survive-v1";
 const SAVE_VERSION = 1;
-const SONG_IDS = Object.keys(SONGS);
+const ALL_SONG_IDS = Object.keys(SONGS);
+/* 내 성부가 부를 수 있는 곡 */
+const songsFor = voice => ALL_SONG_IDS.filter(id => SONGS[id].voices.includes(voice));
 const GROUPS = ["가", "나", "다"];
 
 let state = null;          // 저장되는 전체 상태
@@ -28,6 +30,7 @@ const shuffle = arr => {
   return a;
 };
 const school = id => SCHOOLS.find(s => s.id === id);
+function mySongs() { return songsFor(state.voiceType); }
 
 function voiceLabel(v) {
   if (v >= 70) return { text: "좋음", icon: "😊", cls: "good" };
@@ -56,7 +59,7 @@ function gainMastery(songId, amount) {
 }
 
 function bestSong() {
-  return SONG_IDS.reduce((b, id) => (state.run.mastery[id] > state.run.mastery[b] ? id : b), SONG_IDS[0]);
+  return mySongs().reduce((b, id) => (state.run.mastery[id] > state.run.mastery[b] ? id : b), mySongs()[0]);
 }
 
 /* =====================================================
@@ -168,8 +171,8 @@ function importSave() {
 /* ---------- 새 게임 / 회차 ---------- */
 function newRun(prevMastery) {
   const mastery = {};
-  SONG_IDS.forEach(id => {
-    mastery[id] = prevMastery ? prevMastery[id] * BALANCE.masteryKeepOnRegress : 0;
+  ALL_SONG_IDS.forEach(id => {
+    mastery[id] = prevMastery ? (prevMastery[id] || 0) * BALANCE.masteryKeepOnRegress : 0;
   });
   return {
     turn: 0,
@@ -185,13 +188,14 @@ function newRun(prevMastery) {
 
 function newGame(voiceType, name) {
   const assignedSchools = SCHOOLS.filter(s => s.mode === "assigned");
-  const songs = shuffle(SONG_IDS);
+  const songs = shuffle(songsFor(voiceType));
   const assigned = {};
   assignedSchools.forEach((s, i) => { assigned[s.id] = songs[i % songs.length]; });
   state = {
     version: SAVE_VERSION,
     name: name || "나",
     voiceType,
+    gender: VOICE_TYPES[voiceType].gender,
     loop: 1,
     world: { assigned },            // 회귀해도 같은 해 → 지정곡은 그대로
     info: { assigned: false, cold: false, accompanist: false, cutoffs: {} }, // 회귀해도 남는 기억
@@ -296,7 +300,7 @@ function playStage(options) {
 ===================================================== */
 function renderTitle() {
   const saved = loadSaved();
-  const chars = Object.keys(VOICE_TYPES).map(v => charImg("idle", v)).join("");
+  const chars = Object.keys(VOICE_TYPES).filter(v => !VOICE_TYPES[v].borrowed).map(v => charImg("idle", v)).join("");
   screen.innerHTML = `
     <div class="wrap center">
       <div class="scene title-scene" id="scene">
@@ -340,32 +344,44 @@ function renderTitle() {
 }
 
 function renderVoiceSelect() {
-  let picked = "tenor";
-  const cards = Object.entries(VOICE_TYPES).map(([k, v]) => `
-    <button class="voice-card ${k === picked ? "selected" : ""}" data-voice="${k}">
-      ${charImg("idle", k)}
-      <div class="v-name">${v.label}</div>
-    </button>`).join("");
-  screen.innerHTML = `
-    <div class="wrap center">
-      <div class="px-win">
-        <div class="win-title">새 게임</div>
-        <h2 class="modal-title">성부를 고르세요</h2>
-        <p class="small muted">메조소프라노·베이스는 그림이 준비되면 추가됩니다.</p>
-        <div class="voice-grid">${cards}</div>
-        <label class="field">이름 <input id="nameInput" maxlength="8" placeholder="나" autocomplete="off"></label>
-        <button class="px-btn big" id="goBtn">고3, 3월부터 시작 ▶</button>
-        <button class="px-btn sub" id="backBtn">처음으로</button>
-      </div>
-    </div>`;
-  screen.querySelectorAll("[data-voice]").forEach(b => {
-    b.onclick = () => {
-      picked = b.dataset.voice;
-      screen.querySelectorAll("[data-voice]").forEach(x => x.classList.toggle("selected", x === b));
-    };
-  });
-  document.getElementById("backBtn").onclick = renderTitle;
-  document.getElementById("goBtn").onclick = () => newGame(picked, document.getElementById("nameInput").value.trim());
+  let gender = "female";
+  let picked = "soprano";
+  const draw = () => {
+    const cards = Object.entries(VOICE_TYPES).filter(([, v]) => v.gender === gender).map(([k, v]) => `
+      <button class="voice-card ${k === picked ? "selected" : ""}" data-voice="${k}">
+        ${charImg("idle", k)}
+        <div class="v-name">${v.label}</div>
+        ${v.borrowed ? `<div class="borrow">그림 준비 중</div>` : ""}
+      </button>`).join("");
+    const songs = songsFor(picked).map(id => SONGS[id].title).join(", ");
+    const name = (document.getElementById("nameInput") || {}).value || "";
+    screen.innerHTML = `
+      <div class="wrap center">
+        <div class="px-win">
+          <div class="win-title">새 게임</div>
+          <h2 class="modal-title">나는 어떤 성악가?</h2>
+          <div class="sec-label">성별</div>
+          <div class="seg">${Object.entries(GENDERS).map(([k, l]) => `<button data-gender="${k}" class="${k === gender ? "on" : ""}">${l}</button>`).join("")}</div>
+          <div class="sec-label" style="margin-top:12px">성부</div>
+          <div class="voice-grid">${cards}</div>
+          <div class="desc-box">🎵 입시곡: ${esc(songs)}</div>
+          <label class="field">이름 <input id="nameInput" maxlength="8" placeholder="나" autocomplete="off" value="${esc(name)}"></label>
+          <button class="px-btn big" id="goBtn">고3, 3월부터 시작 ▶</button>
+          <button class="px-btn sub" id="backBtn">처음으로</button>
+        </div>
+      </div>`;
+    screen.querySelectorAll("[data-gender]").forEach(b => {
+      b.onclick = () => {
+        gender = b.dataset.gender;
+        picked = Object.keys(VOICE_TYPES).find(k => VOICE_TYPES[k].gender === gender);
+        draw();
+      };
+    });
+    screen.querySelectorAll("[data-voice]").forEach(b => { b.onclick = () => { picked = b.dataset.voice; draw(); }; });
+    document.getElementById("backBtn").onclick = renderTitle;
+    document.getElementById("goBtn").onclick = () => newGame(picked, document.getElementById("nameInput").value.trim());
+  };
+  draw();
 }
 
 function renderDex(back) {
@@ -450,16 +466,15 @@ async function mockExam() {
     kicker: "모의 실기",
     title: "어떤 곡을 부를까?",
     body: "<p>망쳐도 회귀하지 않는 연습 무대입니다.</p>",
-    choices: [...SONG_IDS.map(id => ({ label: SONGS[id].title, sub: `숙련도 ${r(state.run.mastery[id])}` })),
+    choices: [...mySongs().map(id => ({ label: SONGS[id].title, sub: `숙련도 ${r(state.run.mastery[id])}` })),
       ...(state.loop > 1 ? ["이번엔 건너뛴다"] : [])]
   });
-  if (c >= SONG_IDS.length) return;
-  const songId = SONG_IDS[c];
-  const p = examParams(songId, 0.7);
+  if (c >= mySongs().length) return;
+  const songId = mySongs()[c];
+  const p = stageParams(songId, 1);
   const res = await playStage({
     song: SONGS[songId], label: `모의 실기 · ${SONGS[songId].title}`,
-    timeMult: p.timeMult, hp: p.hp, typoTolerance: p.typo, voiceLevel: voiceLevel(state.run.voice),
-    endTime: SONGS[songId].practiceEnd, allowQuit: true
+    ...stageOpts(songId, p), endTime: SONGS[songId].practiceEnd, allowQuit: true
   });
   const score = finalScore(res, songId);
   gainMastery(songId, 5);
@@ -527,7 +542,7 @@ async function accompanistEvent() {
     await showModal({ kicker: "12월 하순", title: "반주 선생님 연락 두절", body: "<p>예상대로 반주 선생님이 잠수했다. 미리 섭외해 둔 예비 반주자와 바로 맞춰 봤다.</p>" });
   } else {
     state.run.accompanistTrouble = true;
-    SONG_IDS.forEach(id => { state.run.mastery[id] = clamp(state.run.mastery[id] - 5); });
+    mySongs().forEach(id => { state.run.mastery[id] = clamp(state.run.mastery[id] - 5); });
     await showModal({
       kicker: "12월 하순", title: "반주 선생님 연락 두절",
       body: "<p>실기 한 달 전, 반주 선생님이 연락을 받지 않는다. 급히 구한 반주자와는 호흡이 맞지 않는다.</p><p class=\"bad\">모든 곡 숙련도 −5, 실기 무대 HP −1</p>"
@@ -577,7 +592,7 @@ function renderPlanner() {
   const turnsLeft = FIXED_TURNS.exam - run.turn;
   const infos = futureInfoList();
 
-  const masteryRows = SONG_IDS.map(id => {
+  const masteryRows = mySongs().map(id => {
     const tags = SCHOOLS.filter(s => s.mode === "assigned" && state.info.assigned && state.world.assigned[s.id] === id)
       .map(s => `<span class="tag">${s.group}군</span>`).join(" ");
     return `
@@ -677,11 +692,11 @@ function openSheet(slot) {
     const needsSong = pick && ACTIONS[pick.action].needsSong;
     const songs = needsSong ? `
       <div class="sec-label">곡 고르기</div>
-      <div class="song-pick">${SONG_IDS.map(id => {
+      <div class="song-pick">${mySongs().map(id => {
         const tags = SCHOOLS.filter(s => s.mode === "assigned" && state.info.assigned && state.world.assigned[s.id] === id)
           .map(s => `<span class="tag">${s.group}군</span>`).join("");
         return `<button class="song-opt ${pick.song === id ? "selected" : ""}" data-song="${id}">
-          <span>${esc(SONGS[id].title)}${tags}</span>${gauge(state.run.mastery[id], "mastery", 10)}<span class="stat-num">${r(state.run.mastery[id])}</span></button>`;
+          <span>${esc(SONGS[id].title)}${tags} <span class="tag violet">${tierFor(ease(id)).name}</span></span>${gauge(state.run.mastery[id], "mastery", 10)}<span class="stat-num">${r(state.run.mastery[id])}</span></button>`;
       }).join("")}</div>` : "";
     sheet.innerHTML = `
       <div class="sheet-head"><span class="name-tag">${label}</span> 무엇을 할까?</div>
@@ -753,22 +768,28 @@ async function advanceTurn() {
       const pre = snapshot();
 
       if (action === "stage") {
-        const p = practiceParams(song);
+        const p = stageParams(song, 1.1);
         const res = await playStage({
           song: SONGS[song], label: `실전 연습 · ${SONGS[song].title}`,
-          timeMult: p.timeMult, hp: p.hp, typoTolerance: p.typo, voiceLevel: voiceLevel(run.voice),
-          endTime: SONGS[song].practiceEnd, allowQuit: true
+          ...stageOpts(song, p), endTime: SONGS[song].practiceEnd, allowQuit: true
         });
         gainMastery(song, (4 + res.accuracy * 16) * f);
         gainSkill((1 + res.accuracy * 4) * f);
         skillGained = true;
         log.push(`${slotName}: 실전 연습 — ${SONGS[song].title} (정확도 ${r(res.accuracy * 100)}%)`);
       } else {
-        if (a.skill > 0) { gainSkill(a.skill * f); skillGained = true; }
+        let g = f;
+        let note = "";
+        if (a.minigame) {
+          const m = await MiniGames.play(a.minigame, { ease: song ? ease(song) : run.skill / 100 });
+          g *= m.skipped ? BALANCE.minigameSkip : 0.5 + m.ratio;
+          note = m.skipped ? " (미니게임 건너뜀)" : ` (미니게임 ${r(m.ratio * 100)}점)`;
+        }
+        if (a.skill > 0) { gainSkill(a.skill * g); skillGained = true; }
         else if (a.skill < 0) gainSkill(a.skill);
-        if (a.mastery && song) gainMastery(song, a.mastery * f);
+        if (a.mastery && song) gainMastery(song, a.mastery * g);
         if (action === "backup") run.backup = true;
-        log.push(`${slotName}: ${a.label}${song ? ` — ${SONGS[song].title}` : ""}`);
+        log.push(`${slotName}: ${a.label}${song ? ` — ${SONGS[song].title}` : ""}${note}`);
       }
       run.voice = clamp(run.voice + a.voice);
 
@@ -838,7 +859,7 @@ function diffHtml(before) {
     return x === 0 ? "" : `<span class="${x > 0 ? "up" : "down"}">${x > 0 ? "+" : ""}${x}</span>`;
   };
   const items = [`실력 ${r(run.skill)} ${d(before.skill, run.skill)}`];
-  SONG_IDS.forEach(id => {
+  mySongs().forEach(id => {
     const x = d(before.mastery[id], run.mastery[id]);
     if (x) items.push(`${esc(SONGS[id].title)} ${r(run.mastery[id])} ${x}`);
   });
@@ -869,7 +890,7 @@ function applyEffect(e) {
   if (e.skill) gainSkill(e.skill);
   if (e.voice) run.voice = clamp(run.voice + e.voice);
   if (e.masteryBest) gainMastery(bestSong(), e.masteryBest);
-  if (e.masteryRandom) gainMastery(SONG_IDS[Math.floor(Math.random() * SONG_IDS.length)], e.masteryRandom);
+  if (e.masteryRandom) gainMastery(mySongs()[Math.floor(Math.random() * mySongs().length)], e.masteryRandom);
   if (e.boost) run.boost = true;
 }
 
@@ -880,22 +901,29 @@ function ease(songId) {
   return 0.5 * state.run.skill / 100 + 0.5 * state.run.mastery[songId] / 100;
 }
 
-function practiceParams(songId) {
+function tierFor(e) {
+  return STAGE_TIERS.reduce((t, x) => (e >= x.min ? x : t), STAGE_TIERS[0]);
+}
+
+/* 연습량(실력·숙련도)이 무대의 여유를 정한다 */
+function stageParams(songId, schoolSpeed = 1) {
   const e = ease(songId);
+  const tier = tierFor(e);
+  let timeMult = tier.timeMult * schoolSpeed;
+  if (state.run.voice < 15) timeMult *= 0.85;
+  let hp = 3 + tier.hpBonus;
+  if (state.run.accompanistTrouble) hp -= 1;
   return {
-    timeMult: 0.75 + e * 0.6,
-    hp: 5,
-    typo: e >= 0.7 ? 2 : 1
+    timeMult, hp: Math.max(1, hp), typo: tier.typo,
+    lookahead: tier.lookahead, preview: tier.preview, tierName: tier.name
   };
 }
 
-function examParams(songId, timeBase) {
-  const e = ease(songId);
-  let timeMult = timeBase + e * 0.6;
-  if (state.run.voice < 15) timeMult *= 0.85;
-  let hp = 2 + Math.round(e * 4);
-  if (state.run.accompanistTrouble) hp -= 1;
-  return { timeMult, hp: Math.max(1, hp), typo: e >= 0.7 ? 2 : 1 };
+function stageOpts(songId, p) {
+  return {
+    timeMult: p.timeMult, hp: p.hp, typoTolerance: p.typo, lookahead: p.lookahead,
+    preview: p.preview, tierName: p.tierName, voiceLevel: voiceLevel(state.run.voice)
+  };
 }
 
 function finalScore(res, songId) {
@@ -935,15 +963,14 @@ async function finalExams() {
       const c = await showModal({
         kicker: `${g}군 실기`, title: esc(s.name),
         body: "<p>자유곡 학교. 부를 곡을 고르세요.</p>",
-        choices: SONG_IDS.map(id => ({ label: SONGS[id].title, sub: `숙련도 ${r(run.mastery[id])}` }))
+        choices: mySongs().map(id => ({ label: SONGS[id].title, sub: `숙련도 ${r(run.mastery[id])}` }))
       });
-      songId = SONG_IDS[c];
+      songId = mySongs()[c];
     }
-    const p = examParams(songId, s.timeBase);
+    const p = stageParams(songId, s.timeBase);
     const res = await playStage({
       song: SONGS[songId], label: `${g}군 실기 · ${s.name}`,
-      timeMult: p.timeMult, hp: p.hp, typoTolerance: p.typo, voiceLevel: voiceLevel(run.voice),
-      allowQuit: false
+      ...stageOpts(songId, p), allowQuit: false
     });
     const score = finalScore(res, songId);
     const passed = res.cleared && score >= s.cutoff;

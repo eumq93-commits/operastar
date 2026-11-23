@@ -8,7 +8,10 @@
      endTime,         // 이 시간(초)까지만 부른다 (없으면 끝까지)
      timeMult,        // 낙하 시간 배율 (클수록 쉬움)
      hp,              // 목숨
-     typoTolerance,   // PASS로 인정하는 오타 글자 수 (1~2)
+     typoTolerance,   // PASS로 인정하는 오타 글자 수 (0~2)
+     lookahead,       // 아직 안 떨어진 다음 가사를 미리 쳐도 인정하는 줄 수
+     preview,         // 화면 위에 미리 보여 줄 다음 가사 줄 수
+     tierName,        // 여유도 이름 (급박/빠듯/여유/완벽)
      voiceLevel,      // "ok" | "hoarse" | "bad"  (목 상태 → 가사 흔들림)
      images,          // 성부별 캐릭터 이미지
      allowQuit,       // 중단 버튼 표시
@@ -36,13 +39,15 @@ const Stage = (() => {
   let counts = { PERFECT: 0, GOOD: 0, PASS: 0, MISS: 0 };
   let running = false, rafId = null, wordId = 0, composing = false;
   let fakeClockStart = null; // 음악 재생 실패 시 타이머로 대신 진행
+  let presung = new Set();   // 미리 쳐서 이미 부른 가사 번호
+  let previewCache = "";
   let timers = {};
 
   function init() {
     ["stageScreen", "stageArt", "gameStage", "fallingLayer", "missLine", "typingInput",
      "submitBtn", "hpValue", "scoreValue", "comboValue", "judgementLayer", "judgementMain",
      "judgementSub", "phaseLayer", "phaseText", "musicProgress", "singerMotion", "singerImage",
-     "singerBubble", "singerBubbleText", "stageMusic", "stageLabel", "quitStageBtn"]
+     "singerBubble", "singerBubbleText", "stageMusic", "stageLabel", "quitStageBtn", "lyricPreview", "tierBadge"]
       .forEach(id => { el[id] = $(id); });
 
     Object.entries(SFX_FILES).forEach(([k, src]) => {
@@ -218,9 +223,10 @@ const Stage = (() => {
     const target = currentTarget();
     el.typingInput.value = "";
     el.typingInput.focus();
-    if (!target) return;
     hideBubble();
-    const r = judge(typed, target.text);
+    const r = target ? judge(typed, target.text) : { grade: "MISS", rate: 0 };
+    if (r.grade === "MISS" && tryAhead(typed)) return; // 다음 가사를 미리 친 경우
+    if (!target) return;
     if (r.grade === "MISS") {
       if (!target.penalty) { target.penalty = true; loseHp("다시!"); }
       else { combo = 0; updateUI(); showJudgement("MISS", "다시!"); }
@@ -235,6 +241,44 @@ const Stage = (() => {
     showJudgement(r.grade, "+" + earned);
     showBubble(r.grade, typed);
     removeWord(target.id);
+  }
+
+  /* 아직 떨어지지 않은 다음 가사 (미리 부른 것 제외) */
+  function upcoming(n) {
+    const out = [];
+    for (let i = nextIndex; i < lyrics.length && out.length < n; i++) {
+      if (!presung.has(i)) out.push(i);
+    }
+    return out;
+  }
+
+  function tryAhead(typed) {
+    if (!opts.lookahead) return false;
+    for (const idx of upcoming(opts.lookahead)) {
+      const r = judge(typed, lyrics[idx].text);
+      if (r.grade === "MISS") continue;
+      presung.add(idx);
+      const earned = Math.round(noSpace(lyrics[idx].text).length * 100 * r.rate);
+      score += earned;
+      combo++;
+      maxCombo = Math.max(maxCombo, combo);
+      counts[r.grade]++;
+      updateUI();
+      showJudgement(r.grade, "미리! +" + earned);
+      showBubble(r.grade, typed);
+      return true;
+    }
+    return false;
+  }
+
+  function updatePreview() {
+    if (!opts.preview) { if (previewCache) { el.lyricPreview.hidden = true; previewCache = ""; } return; }
+    const list = upcoming(opts.preview).map(i => lyrics[i].text);
+    const str = list.join(" / ");
+    if (str === previewCache) return;
+    previewCache = str;
+    el.lyricPreview.hidden = !str;
+    el.lyricPreview.textContent = str ? "다음 ▸ " + str : "";
   }
 
   /* ---------- 루프 ---------- */
@@ -257,9 +301,10 @@ const Stage = (() => {
     const t = now();
 
     while (nextIndex < lyrics.length && t >= lyrics[nextIndex].time) {
-      createWord(lyrics[nextIndex], nextIndex);
+      if (!presung.has(nextIndex)) createWord(lyrics[nextIndex], nextIndex);
       nextIndex++;
     }
+    updatePreview();
 
     const stageTop = el.gameStage.getBoundingClientRect().top;
     const lineY = el.missLine.getBoundingClientRect().top - stageTop;
@@ -304,7 +349,7 @@ const Stage = (() => {
 
   /* ---------- 시작 / 종료 ---------- */
   function play(options) {
-    opts = Object.assign({ timeMult: 1, hp: 5, typoTolerance: 1, voiceLevel: "ok", allowQuit: true }, options);
+    opts = Object.assign({ timeMult: 1, hp: 5, typoTolerance: 1, lookahead: 0, preview: 0, voiceLevel: "ok", allowQuit: true }, options);
     lyrics = opts.song.lyrics.filter(l => !opts.endTime || l.time < opts.endTime - 2);
 
     activeWords.forEach(w => w.element.remove());
@@ -313,8 +358,13 @@ const Stage = (() => {
     hp = opts.hp; score = 0; combo = 0; maxCombo = 0;
     counts = { PERFECT: 0, GOOD: 0, PASS: 0, MISS: 0 };
     fakeClockStart = null;
+    presung = new Set();
+    previewCache = "x";
 
     el.stageLabel.textContent = opts.label || opts.song.title;
+    el.tierBadge.hidden = !opts.tierName;
+    el.tierBadge.textContent = opts.tierName ? `여유도 · ${opts.tierName}` : "";
+    el.tierBadge.className = "tier-badge tier-" + (opts.tierName || "");
     el.quitStageBtn.hidden = !opts.allowQuit;
     el.stageScreen.hidden = false;
     fitStageArt();

@@ -6,17 +6,32 @@
 
 /* ---------- 밸런스 수치 (초안: 프로토타입으로 조정) ---------- */
 const BALANCE = {
-  startSkill: 10,          // 시작 실력(경험치)
-  startVoice: 80,          // 시작 목 컨디션 (숨은 게이지)
+  startSkill: 5,           // 시작 실력(경험치)
+  startVoice: 75,          // 시작 목 컨디션 (숨은 게이지)
   maxStat: 100,
-  skillDecay: 3,           // 이번 턴 실력을 올린 행동이 없으면 감소
+  skillDecay: 4,           // 이번 턴 실력을 올린 행동이 없으면 감소
   hoarseVoice: 30,         // 이 아래면 목이 쉬어서 연습 효과 절반
   masteryKeepOnRegress: 0.5, // 회귀해도 남는 곡 숙련도 비율
   eventChance: 0.35,       // 랜덤 이벤트 확률(턴당)
   baseLimitTime: 4.0,      // OPERA TYPE 기본 낙하 시간(초)
-  // 최종 실기 점수 = 정확도×60 + 실력×0.25 + 곡 숙련도×0.15  (최대 100)
-  examWeights: { accuracy: 60, skill: 0.25, mastery: 0.15 }
+  // 최종 실기 점수 = 정확도×50 + 실력×0.3 + 곡 숙련도×0.2  (최대 100)
+  // → 타자만 잘 쳐서는 못 붙는다. 1회차엔 상위권이 거의 불가능, 회귀로 쌓아야 한다.
+  examWeights: { accuracy: 50, skill: 0.3, mastery: 0.2 },
+  minigameSkip: 0.7        // 미니게임을 건너뛰면 효과 70%
 };
+
+/* ---------- 무대 여유도 (연습량 = 실력·숙련도에 따라) ----------
+   ease = 실력/2 + 숙련도/2 (0~1)
+   timeMult: 낙하 시간 배율 (작을수록 급박)
+   typo: PASS로 봐주는 오타 글자 수
+   lookahead: 아직 안 떨어진 다음 가사를 미리 쳐도 인정하는 줄 수
+   preview: 화면 위에 미리 보여 주는 다음 가사 줄 수                  */
+const STAGE_TIERS = [
+  { min: 0,    name: "급박",   timeMult: 0.55, typo: 0, lookahead: 0, preview: 0, hpBonus: -1 },
+  { min: 0.3,  name: "빠듯",   timeMult: 0.75, typo: 1, lookahead: 0, preview: 0, hpBonus: 0 },
+  { min: 0.55, name: "여유",   timeMult: 1.0,  typo: 1, lookahead: 1, preview: 1, hpBonus: 1 },
+  { min: 0.8,  name: "완벽",   timeMult: 1.25, typo: 2, lookahead: 2, preview: 2, hpBonus: 2 }
+];
 
 /* ---------- 달력: 2주 = 1턴, 고3 3월 상순 ~ 1월 하순 ---------- */
 const CALENDAR = (() => {
@@ -35,10 +50,23 @@ const FIXED_TURNS = {
   exam: 21           // 1월 하순: 가·나·다군 실기
 };
 
-/* ---------- 성부 (현재 그림이 있는 3종) ---------- */
+/* ---------- 성별 · 성부 ----------
+   images: 무대 캐릭터 (메조·베이스는 그림이 생길 때까지 소프라노·바리톤 그림을 빌려 씀) */
+const GENDERS = { female: "여성", male: "남성" };
+
 const VOICE_TYPES = {
   soprano: {
     label: "소프라노",
+    gender: "female",
+    images: {
+      normal: "./soprano-normal.png", perfect: "./soprano-perfect.png",
+      good: "./soprano-good.png", pass: "./soprano-pass.png", miss: "./soprano-miss.png"
+    }
+  },
+  mezzo: {
+    label: "메조소프라노",
+    gender: "female",
+    borrowed: true,
     images: {
       normal: "./soprano-normal.png", perfect: "./soprano-perfect.png",
       good: "./soprano-good.png", pass: "./soprano-pass.png", miss: "./soprano-miss.png"
@@ -46,6 +74,7 @@ const VOICE_TYPES = {
   },
   tenor: {
     label: "테너",
+    gender: "male",
     images: {
       normal: "./singer-normal.png", perfect: "./singer-perfect.png",
       good: "./singer-good.png", pass: "./singer-pass.png", miss: "./singer-miss.png"
@@ -53,6 +82,16 @@ const VOICE_TYPES = {
   },
   baritone: {
     label: "바리톤",
+    gender: "male",
+    images: {
+      normal: "./baritone-normal.png", perfect: "./baritone-perfect.png",
+      good: "./baritone-good.png", pass: "./baritone-pass.png", miss: "./baritone-miss.png"
+    }
+  },
+  bass: {
+    label: "베이스",
+    gender: "male",
+    borrowed: true,
     images: {
       normal: "./baritone-normal.png", perfect: "./baritone-perfect.png",
       good: "./baritone-good.png", pass: "./baritone-pass.png", miss: "./baritone-miss.png"
@@ -68,6 +107,7 @@ const SONGS = {
     title: "Lascia ch'io pianga",
     ko: "울게 하소서 · 헨델",
     audio: "./lascia.mp3",
+    voices: ["soprano", "mezzo"],
     fallSpeed: 2,
     practiceEnd: 64,
     lyrics: [
@@ -96,6 +136,7 @@ const SONGS = {
     title: "Santa Lucia",
     ko: "산타 루치아 · 나폴리 민요(코트라우)",
     audio: "./santalucia.mp3",
+    voices: ["soprano", "mezzo", "tenor", "baritone", "bass"],
     fallSpeed: 1,
     lyrics: [
       { time: 16.0, text: "쑬 마레 루치카" }, { time: 21.0, text: "라스트로 다르젠또" },
@@ -113,6 +154,7 @@ const SONGS = {
     title: "'O sole mio",
     ko: "오 나의 태양 · 디 카푸아",
     audio: "./osolemio.mp3",
+    voices: ["tenor", "baritone", "bass"],
     fallSpeed: 2,
     lyrics: [
       { time: 17.0, text: "께 벨라 꼬자" }, { time: 20.0, text: "나 유르 나타 에 쏠레" },
@@ -129,21 +171,21 @@ const SONGS = {
 };
 
 /* ---------- 학교 (패러디 이름) ----------
-   timeBase: 무대 낙하 시간 배율의 기본값 (낮을수록 빠르고 어렵다)
+   timeBase: 학교별 무대 속도 (STAGE_TIERS의 배율에 곱한다. 낮을수록 빠르고 어렵다)
    cutoff: 합격선 (최종 실기 점수)
    mode: assigned = 지정곡 / free = 자유곡                               */
 const SCHOOLS = [
-  { id: "hanguk",   group: "가", name: "한국음악대학교", tier: "최상위", mode: "assigned", timeBase: 0.55, cutoff: 86,
+  { id: "hanguk",   group: "가", name: "한국음악대학교", tier: "최상위", mode: "assigned", timeBase: 0.8, cutoff: 86,
     bonus: "명문 출신: 대학편 인맥 +20" },
-  { id: "seoulart", group: "가", name: "서울예술대학교", tier: "상위",   mode: "free",     timeBase: 0.65, cutoff: 79,
+  { id: "seoulart", group: "가", name: "서울예술대학교", tier: "상위",   mode: "free",     timeBase: 0.85, cutoff: 80,
     bonus: "입학 장학금: 대학편 돈 +30" },
-  { id: "daehan",   group: "나", name: "대한음악원",     tier: "상위",   mode: "assigned", timeBase: 0.62, cutoff: 81,
+  { id: "daehan",   group: "나", name: "대한음악원",     tier: "상위",   mode: "assigned", timeBase: 0.82, cutoff: 82,
     bonus: "엄격한 교수님: 대학편 실력 +10" },
-  { id: "hanbit",   group: "나", name: "한빛대학교",     tier: "중위",   mode: "free",     timeBase: 0.72, cutoff: 71,
+  { id: "hanbit",   group: "나", name: "한빛대학교",     tier: "중위",   mode: "free",     timeBase: 0.9, cutoff: 74,
     bonus: "성적 장학금: 대학편 돈 +15" },
-  { id: "saesol",   group: "다", name: "새솔대학교",     tier: "중위",   mode: "assigned", timeBase: 0.75, cutoff: 65,
+  { id: "saesol",   group: "다", name: "새솔대학교",     tier: "중위",   mode: "assigned", timeBase: 0.92, cutoff: 68,
     bonus: "끈끈한 선후배: 대학편 인맥 +10" },
-  { id: "nuri",     group: "다", name: "누리음악대학",   tier: "하위",   mode: "free",     timeBase: 0.85, cutoff: 56,
+  { id: "nuri",     group: "다", name: "누리음악대학",   tier: "하위",   mode: "free",     timeBase: 1.0, cutoff: 60,
     bonus: "가습기 지급: 대학편 목 감소 완화" }
 ];
 
@@ -151,14 +193,14 @@ const SCHOOLS = [
    needsSong: 곡을 골라야 하는 카드
    skill/mastery/voice: 기본 변화량 (실력·숙련도 상승은 높을수록 둔화)    */
 const ACTIONS = {
-  practice: { label: "개인 연습",   icon: "🎼", needsSong: true,  skill: 1.5, mastery: 7,  voice: -8,
-              desc: "고른 곡의 숙련도 ++, 실력 +, 목 −" },
+  practice: { label: "개인 연습",   icon: "🎼", needsSong: true,  skill: 1,   mastery: 6,  voice: -8, minigame: "breath",
+              desc: "호흡 훈련 미니게임. 고른 곡의 숙련도 ++, 실력 +, 목 −" },
   stage:    { label: "실전 연습",   icon: "🎤", needsSong: true,  skill: 0,   mastery: 0,  voice: -10,
               desc: "직접 무대를 치른다. 잘할수록 숙련도·실력이 크게 오른다. 목 −" },
-  lesson:   { label: "입시 레슨",   icon: "👩‍🏫", needsSong: true,  skill: 4,   mastery: 4,  voice: -8, oncePerTurn: true,
+  lesson:   { label: "입시 레슨",   icon: "👩‍🏫", needsSong: true,  skill: 3,   mastery: 4,  voice: -8, oncePerTurn: true,
               desc: "실력 ++, 숙련도 +, 목 − (한 턴에 한 번)" },
-  theory:   { label: "청음·시창",   icon: "📖", needsSong: false, skill: 2,   mastery: 0,  voice: 0,
-              desc: "목을 쓰지 않고 실력 +" },
+  theory:   { label: "청음·시창",   icon: "📖", needsSong: false, skill: 2,   mastery: 0,  voice: 0, minigame: "solfege",
+              desc: "선율 따라 부르기 미니게임. 목을 쓰지 않고 실력 +" },
   rest:     { label: "휴식",       icon: "🛌", needsSong: false, skill: -1,  mastery: 0,  voice: 30,
               desc: "목 +++, 실력 −" },
   backup:   { label: "예비 반주자 섭외", icon: "🎹", needsSong: false, skill: 0, mastery: 0, voice: 0, oncePerRun: true,
@@ -219,3 +261,14 @@ const ENDINGS = {
   saesol:   { title: "새솔대학교 합격",     text: "선배들이 합격 축하 회식을 열어 줬다." },
   nuri:     { title: "누리음악대학 합격",   text: "작은 학교지만, 무대는 어디서든 시작된다." }
 };
+
+/* ---------- 3장 진로 (대학편 이후, 나중에 구현) ---------- */
+const CAREERS = [
+  { id: "grad-kr",   label: "국내 대학원",       play: "강사 자리·교수 임용 경쟁",                    endings: ["대학 교수", "시립합창단 단원"] },
+  { id: "grad-abroad", label: "해외 대학원",     play: "언어 게이지, 비용과 장학금 경쟁, 극장 오디션", endings: ["해외 극장 전속 가수", "오페라 주역"] },
+  { id: "media",     label: "유튜브·방송",       play: "구독자·인기 게이지, 오디션 프로그램",          endings: ["크로스오버 스타", "트로트 스타"] },
+  { id: "edu",       label: "음악교육대학원",    play: "임용시험 미니게임",                            endings: ["음악교사 (숨겨진 엔딩)"] }
+];
+
+/* 대학편에서 망치면 회귀하는 무대 (실기시험·정기연주회·졸업연주) */
+const COLLEGE_FAIL_STAGES = ["학기말 실기시험", "정기연주회", "졸업연주"];
