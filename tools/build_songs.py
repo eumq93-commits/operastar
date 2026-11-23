@@ -33,6 +33,8 @@ import mido
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 MUTOPIA = os.environ.get("MUTOPIA_DIR", os.path.join(ROOT, "..", "mutopiaproject", "mutopiaproject"))
+# OpenScore Lieder (MusicXML, CC0): git clone https://github.com/OpenScore/Lieder
+OPENSCORE = os.environ.get("OPENSCORE_DIR", os.path.join(ROOT, "..", "openscore", "lieder"))
 OUT_DIR = os.path.join(ROOT, "survive", "songs")
 
 # ---------------------------------------------------------------------------
@@ -47,44 +49,61 @@ SONG_LIST = [
          title="Caro mio ben", ko="카로 미오 벤 · 조르다니", level="입시",
          voices=["soprano", "mezzo", "tenor", "baritone", "bass"], limit=110, tempo=1.0),
     dict(id="iogiatamai", path="HandelGF/HWV19/IoGiaTAmai/IoGiaTAmai.ly",
-         title="Io già t'amai", ko="이오 쟈 따마이 · 헨델", level="입시",
+         title="Io già t'amai", ko="이오 쟈 따마이 · 헨델", level="대학2",
          voices=["tenor", "baritone"], limit=110, tempo=1.0),
     dict(id="nonpensi", path="HandelGF/HWV26/NonPensiQuellAltera/NonPensiQuellAltera.ly",
-         title="Non pensi quell'altera", ko="논 뻰시 꿸랄떼라 · 헨델", level="입시",
+         title="Non pensi quell'altera", ko="논 뻰시 꿸랄떼라 · 헨델", level="대학2",
          voices=["tenor", "baritone"], limit=110, tempo=1.0),
     dict(id="eccoilsol", path="HandelGF/HWV47/Ecco_il_sol/Ecco_il_sol.ly",
-         title="Ecco il sol", ko="에꼬 일 쏠 · 헨델", level="입시",
+         title="Ecco il sol", ko="에꼬 일 쏠 · 헨델", level="대학2",
          voices=["tenor"], limit=110, tempo=1.0),
     dict(id="belpiacer", path="PorporaN/BelPiacer/BelPiacer.ly",
-         title="Bel piacer", ko="벨 삐아체르 · 포르포라", level="입시",
+         title="Bel piacer", ko="벨 삐아체르 · 포르포라", level="대학2",
          voices=["soprano", "mezzo"], limit=110, tempo=1.0),
     dict(id="miseropargoletto", path="LeoL/MiseroPargoletto/MiseroPargoletto.ly",
-         title="Misero pargoletto", ko="미제로 빠르골레또 · 레오", level="입시",
+         title="Misero pargoletto", ko="미제로 빠르골레또 · 레오", level="대학2",
          voices=["soprano", "mezzo"], limit=110, tempo=1.0),
     dict(id="voglioche", path="HandelGF/HWV39/Voglio_che_sia_l_indegno/Voglio_che_sia_l_indegno.ly",
-         title="Voglio che sia l'indegno", ko="볼료 께 씨아 린데뇨 · 헨델", level="입시",
+         title="Voglio che sia l'indegno", ko="볼료 께 씨아 린데뇨 · 헨델", level="대학2",
          voices=["soprano"], limit=110, tempo=1.0),
     dict(id="norisolvo", path="HandelGF/HWV21/NoRisolvoAbbandonar/NoRisolvoAbbandonar.ly",
-         title="No! Risolvo abbandonar", ko="노 리졸보 아반도나르 · 헨델", level="입시",
+         title="No! Risolvo abbandonar", ko="노 리졸보 아반도나르 · 헨델", level="대학2",
          voices=["mezzo"], limit=110, tempo=1.0),
     dict(id="sepotessero", path="HandelGF/HWV41/Se_potessero/Se_potessero.ly",
-         title="Se potessero i sospir' miei", ko="세 뽀떼쎄로 · 헨델", level="입시",
+         title="Se potessero i sospir' miei", ko="세 뽀떼쎄로 · 헨델", level="대학2",
          voices=["mezzo"], limit=110, tempo=1.0),
     dict(id="lagloriasola", path="HandelGF/HWV22/LaGloriaSola/LaGloriaSola.ly",
-         title="La gloria sola", ko="라 글로리아 쏠라 · 헨델", level="입시",
+         title="La gloria sola", ko="라 글로리아 쏠라 · 헨델", level="대학2",
          voices=["bass", "baritone"], limit=110, tempo=1.0),
     dict(id="imparaingrata", path="HandelGF/HWV35/ImparaIngrata/ImparaIngrata.ly",
-         title="Impara, ingrata", ko="임빠라 인그라따 · 헨델", level="입시",
+         title="Impara, ingrata", ko="임빠라 인그라따 · 헨델", level="대학2",
          voices=["bass", "baritone"], limit=110, tempo=1.0),
     dict(id="signorsignor", path="HandelGF/HWV40/SignorSignorLasciateFarAMe/SignorSignorLasciateFarAMe.ly",
-         title="Signor, lasciate far a me", ko="시뇨르 라샤떼 파르 아 메 · 헨델", level="입시",
+         title="Signor, lasciate far a me", ko="시뇨르 라샤떼 파르 아 메 · 헨델", level="대학2",
          voices=["bass", "baritone"], limit=110, tempo=1.0),
     dict(id="notteegiorno", path="MozartWA/KV527/NotteEGiorno/NotteEGiorno.ly",
          title="Notte e giorno faticar", ko="노떼 에 조르노 · 모차르트", level="대학4",
          voices=["bass", "baritone"], limit=110, tempo=1.0),
     dict(id="vorreibaciarti", path="CeresiniG/Vorrei_baciarti/Vorrei_baciarti.ly",
-         title="Vorrei baciarti", ko="보레이 바챠르띠 · 체레시니", level="입시",
+         title="Vorrei baciarti", ko="보레이 바챠르띠 · 체레시니", level="대학2",
          voices=["tenor", "baritone"], limit=110, tempo=1.0),
+
+    # ---- OpenScore Lieder (MusicXML) ----
+    dict(id="spiratepur", mxl="Donaudy,_Stefano/36_Arie_di_Stile_Antico/10_Spirate_pur,_spirate/lc29420288.mxl",
+         title="Spirate pur, spirate", ko="스삐라떼 뿌르 스삐라떼 · 도나우디", level="입시",
+         voices=["soprano", "mezzo", "tenor", "baritone", "bass"], limit=110, tempo=1.0),
+    dict(id="ideale", mxl="Tosti,_Francesco_Paolo/_/Ideale/lc29381987.mxl",
+         title="Ideale", ko="이데알레 · 토스티", level="대학1",
+         voices=["soprano", "mezzo", "tenor", "baritone", "bass"], limit=110, tempo=1.0),
+    dict(id="sogno", mxl="Tosti,_Francesco_Paolo/_/Sogno/lc29748842.mxl",
+         title="Sogno", ko="쏜뇨 · 토스티", level="대학1",
+         voices=["soprano", "mezzo", "tenor", "baritone"], limit=110, tempo=1.0),
+    dict(id="mattinata", mxl="Leoncavallo,_Ruggero/_/Mattinata/lc29421746.mxl",
+         title="Mattinata", ko="마띠나따 · 레온카발로", level="대학1",
+         voices=["tenor", "baritone", "soprano"], limit=110, tempo=1.0),
+    dict(id="insolitaria", mxl="Verdi,_Giuseppe/6_Romanze/3_In_solitaria_stanza/lc29477486.mxl",
+         title="In solitaria stanza", ko="인 쏠리따리아 스딴짜 · 베르디", level="대학1",
+         voices=["soprano", "mezzo"], limit=110, tempo=1.0),
 ]
 
 # ---------------------------------------------------------------------------
@@ -224,6 +243,46 @@ def read_midi(path, tempo_scale=1.0):
                     notes.append((sec(start), sec(tick) - sec(start), msg.note))
         notes.sort()
         tracks.append(dict(name=name, notes=notes, lyrics=lyrics))
+    return tracks
+
+
+def read_mxl(path, tempo_scale=1.0):
+    """MusicXML(OpenScore) → read_midi 와 같은 모양의 트랙 목록. 코드 실행 없이 데이터만 읽는다."""
+    from music21 import converter, tempo as m21tempo
+
+    score = converter.parse(path).stripTies()
+    # 템포 구간 (박 → 초)
+    bounds = score.metronomeMarkBoundaries()
+
+    def sec(ql):
+        total = 0.0
+        for start, end, mm in bounds:
+            qpm = mm.getQuarterBPM() or 72
+            if ql <= start:
+                break
+            seg = min(ql, end) - start
+            total += seg * 60.0 / qpm
+        return total / tempo_scale
+
+    tracks = []
+    for part in score.parts:
+        notes, lyrics = [], []
+        for el in part.flatten().notes:
+            off = float(el.getOffsetInHierarchy(score))
+            s0 = sec(off)
+            d = sec(off + float(el.quarterLength)) - s0
+            pitches = [el.pitch] if el.isNote else list(el.pitches)
+            for pt in pitches:
+                notes.append((s0, d, pt.midi))
+            if el.isNote and el.lyrics:
+                ly = el.lyrics[0]
+                t = ly.text or ""
+                if ly.syllabic in ("begin", "middle"):
+                    t += "-"
+                if t.strip():
+                    lyrics.append((s0, t))
+        notes.sort()
+        tracks.append(dict(name=part.partName or "", notes=notes, lyrics=lyrics))
     return tracks
 
 
@@ -493,14 +552,17 @@ def pack(notes, limit):
 
 
 def build(song):
-    ly = os.path.join(MUTOPIA, "ftp", song["path"])
-    problems = check_safe(ly)
-    if problems:
-        print(f"  ✗ 건너뜀 (위험한 코드): {problems[:3]}")
-        return None
-    with tempfile.TemporaryDirectory() as work:
-        mid = to_midi(ly, work)
-        tracks = read_midi(mid, song.get("tempo", 1.0))
+    if song.get("mxl"):
+        tracks = read_mxl(os.path.join(OPENSCORE, "scores", song["mxl"]), song.get("tempo", 1.0))
+    else:
+        ly = os.path.join(MUTOPIA, "ftp", song["path"])
+        problems = check_safe(ly)
+        if problems:
+            print(f"  ✗ 건너뜀 (위험한 코드): {problems[:3]}")
+            return None
+        with tempfile.TemporaryDirectory() as work:
+            mid = to_midi(ly, work)
+            tracks = read_midi(mid, song.get("tempo", 1.0))
     voice, lyr, bass, upper = pick_tracks(tracks)
     limit = song.get("limit", 110)
     lines = build_lines(lyr["lyrics"], limit)
@@ -539,7 +601,7 @@ def main():
     for song in SONG_LIST:
         if want and song["id"] not in want:
             continue
-        print(f"▶ {song['id']}  ({song['path']})")
+        print(f"▶ {song['id']}  ({song.get('path') or song.get('mxl')})")
         try:
             d = build(song)
         except Exception as e:  # noqa: BLE001

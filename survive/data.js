@@ -139,7 +139,7 @@ const SONGS = {
     title: "Santa Lucia",
     ko: "산타 루치아 · 나폴리 민요(코트라우)",
     audio: "./santalucia.mp3",
-    level: "입시",
+    level: "오브리",
     voices: ["soprano", "mezzo", "tenor", "baritone", "bass"],
     fallSpeed: 1,
     lyrics: [
@@ -158,7 +158,7 @@ const SONGS = {
     title: "'O sole mio",
     ko: "오 나의 태양 · 디 카푸아",
     audio: "./osolemio.mp3",
-    level: "입시",
+    level: "오브리",
     voices: ["tenor", "baritone", "bass"],
     fallSpeed: 2,
     lyrics: [
