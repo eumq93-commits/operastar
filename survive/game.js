@@ -307,7 +307,13 @@ function showModal({ kicker = "", title = "", body = "", choices = ["확인"], s
   });
 }
 
-const TEACHER = { name: "입시 레슨 선생님", emo: "👩‍🏫", get art() { return ART.teacher; } };
+/* 레슨 선생님: 남학생은 남자 선생님(턱시도), 여학생은 여자 선생님(드레스) */
+const TEACHER = {
+  get male() { return state && state.gender === "male"; },
+  get name() { return this.male ? "입시 레슨 선생님 (남)" : "입시 레슨 선생님 (여)"; },
+  get emo() { return this.male ? "👨‍🏫" : "👩‍🏫"; },
+  get art() { return this.male ? ART.teacherMale : ART.teacherFemale; }
+};
 
 async function teacherSays(lines) {
   for (let i = 0; i < lines.length; i++) {

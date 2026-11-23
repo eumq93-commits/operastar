@@ -15,7 +15,9 @@ const ART = {
   bgLesson:   ART_DIR + "bg-lesson.png",    // 입시 레슨실
 
   // 인물
-  teacher:    ART_DIR + "teacher.png",      // 레슨 선생님 얼굴 (64×64)
+  // 레슨 선생님 얼굴 (정사각형) — 남학생은 남자 선생님, 여학생은 여자 선생님
+  teacherMale:   ART_DIR + "teacher-male.png",
+  teacherFemale: ART_DIR + "teacher-female.png",
 
   // 행동 카드 아이콘 (32×32)
   icon: {
@@ -49,7 +51,7 @@ const ART_OK = new Set();
 function artAvailable(path) { return ART_OK.has(path); }
 
 function preloadArt(voices, timeoutMs = 2500) {
-  const paths = [ART.bgTitle, ART.bgRoom, ART.bgPractice, ART.bgLesson, ART.teacher, ...Object.values(ART.icon)];
+  const paths = [ART.bgTitle, ART.bgRoom, ART.bgPractice, ART.bgLesson, ART.teacherMale, ART.teacherFemale, ...Object.values(ART.icon)];
   voices.forEach(v => ["idle", "sing", "rest", "sick"].forEach(p => paths.push(ART.sd(v, p))));
   const jobs = paths.map(src => new Promise(done => {
     const img = new Image();
