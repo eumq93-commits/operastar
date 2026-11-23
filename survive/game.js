@@ -92,7 +92,7 @@ function iconHtml(action, size = 40) {
 }
 
 function charImg(pose = "idle", voice = state.voiceType) {
-  const sd = ART.sd(voice, pose);
+  const sd = ART.sd(VOICE_TYPES[voice].sdFrom || voice, pose); // 메조·베이스는 소프라노·바리톤 그림을 빌려 씀
   const fb = VOICE_TYPES[voice].images[pose === "sing" ? "perfect" : pose === "sick" ? "miss" : "normal"];
   return `<img src="${artAvailable(sd) ? sd : fb}" alt="">`;
 }
@@ -387,7 +387,7 @@ function renderVoiceSelect() {
       <button class="voice-card ${k === picked ? "selected" : ""}" data-voice="${k}">
         ${charImg("idle", k)}
         <div class="v-name">${v.label}</div>
-        ${v.borrowed ? `<div class="borrow">그림 준비 중</div>` : ""}
+        ${v.borrowed ? `<div class="borrow">${VOICE_TYPES[v.sdFrom].label} 그림 공유</div>` : ""}
       </button>`).join("");
     const songs = songsFor(picked).map(id => SONGS[id].title).join(", ");
     const name = (document.getElementById("nameInput") || {}).value || "";

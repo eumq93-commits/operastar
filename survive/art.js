@@ -52,7 +52,7 @@ function artAvailable(path) { return ART_OK.has(path); }
 
 function preloadArt(voices, timeoutMs = 2500) {
   const paths = [ART.bgTitle, ART.bgRoom, ART.bgPractice, ART.bgLesson, ART.teacherMale, ART.teacherFemale, ...Object.values(ART.icon)];
-  voices.forEach(v => ["idle", "sing", "rest", "sick"].forEach(p => paths.push(ART.sd(v, p))));
+  voices.filter(v => !VOICE_TYPES[v].sdFrom).forEach(v => ["idle", "sing", "rest", "sick"].forEach(p => paths.push(ART.sd(v, p))));
   const jobs = paths.map(src => new Promise(done => {
     const img = new Image();
     img.onload = () => { ART_OK.add(src); done(); };

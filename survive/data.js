@@ -67,6 +67,7 @@ const VOICE_TYPES = {
     label: "메조소프라노",
     gender: "female",
     borrowed: true,
+    sdFrom: "soprano",
     images: {
       normal: "./soprano-normal.png", perfect: "./soprano-perfect.png",
       good: "./soprano-good.png", pass: "./soprano-pass.png", miss: "./soprano-miss.png"
@@ -92,6 +93,7 @@ const VOICE_TYPES = {
     label: "베이스",
     gender: "male",
     borrowed: true,
+    sdFrom: "baritone",
     images: {
       normal: "./baritone-normal.png", perfect: "./baritone-perfect.png",
       good: "./baritone-good.png", pass: "./baritone-pass.png", miss: "./baritone-miss.png"
