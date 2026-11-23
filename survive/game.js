@@ -78,6 +78,15 @@ function gainMastery(songId, amount) {
   run.mastery[songId] = clamp(run.mastery[songId] + amount);
 }
 
+/* ---------- 용돈 · 체중 ---------- */
+function weightZone(w = state.run.weight) {
+  return WEIGHT_ZONES.find(z => w <= z.max) || WEIGHT_ZONES[WEIGHT_ZONES.length - 1];
+}
+function weightKg() {
+  return (BALANCE.baseWeight[state.gender] || 60) + state.run.weight;
+}
+const won = m => `${r(m)}만원`;
+
 function bestSong() {
   return mySongs().reduce((b, id) => (state.run.mastery[id] > state.run.mastery[b] ? id : b), mySongs()[0]);
 }
@@ -160,6 +169,8 @@ function migrate(d) {
   ALL_SONG_IDS.forEach(id => { if (typeof d.run.mastery[id] !== "number") d.run.mastery[id] = 0; });
   d.settings = Object.assign({ typeMode: "ko", bgm: true }, d.settings || {});
   if (!d.gender) d.gender = VOICE_TYPES[d.voiceType].gender;
+  if (typeof d.run.money !== "number") d.run.money = BALANCE.startMoney;
+  if (typeof d.run.weight !== "number") d.run.weight = 0;
   return d;
 }
 
@@ -210,6 +221,9 @@ function newRun(prevMastery) {
     boost: false,
     backup: false,
     applied: null,
+    money: BALANCE.startMoney,  // 용돈 (만원)
+    weight: 0,                  // 기준 체중 대비 kg
+    notice: "",                 // 계획 화면에 잠깐 띄울 알림
     entered: -1 // 이 턴의 시작 이벤트를 이미 봤는지
   };
 }
@@ -476,6 +490,12 @@ async function enterTurnEvents() {
   const run = state.run;
   const t = run.turn;
 
+  // 매달 상순에 용돈이 들어온다
+  if (t % 2 === 0) {
+    run.money += BALANCE.allowance;
+    run.notice = `💰 이번 달 용돈 +${won(BALANCE.allowance)}`;
+  }
+
   if (state.loop > 1 && t === 0) await showRegressIntro();
   if (state.loop === 1 && TUTORIAL[t]) await teacherSays(TUTORIAL[t]);
 
@@ -684,6 +704,9 @@ function renderPlanner() {
         <div class="stat-row"><div>실력</div>${gauge(run.skill, "skill")}<div class="stat-num">${r(run.skill)}</div></div>
         <div class="voice-line">목 상태 <span class="voice-face ${vl.cls}">${vl.icon} ${vl.text}</span>
           ${run.boost ? `<span class="tag gold">기분 전환 +50%</span>` : ""}</div>
+        <div class="voice-line">체중 <span class="weight-face ${weightZone().cls}">${weightZone().icon} ${weightKg().toFixed(1)}kg · ${weightZone().name}</span>
+          <span class="money">💰 ${won(run.money)}</span></div>
+        <div class="small muted">${esc(weightZone().desc)}</div>
         <div class="divider"></div>
         <div class="sec-label">곡 숙련도</div>
         ${masteryRows}
@@ -713,10 +736,19 @@ function renderPlanner() {
     renderPlanner();
   };
   startBgm();
+  if (run.notice) {
+    const n = run.notice;
+    run.notice = "";
+    save();
+    setTimeout(() => { showSceneBubble(esc(n)); setTimeout(() => showSceneBubble(null), 2600); }, 300);
+  }
 }
 
+const planCost = () => ["weekday", "weekend"].reduce((sum, s) => sum + (plan[s] ? ACTIONS[plan[s].action].cost || 0 : 0), 0);
+
 function planReady() {
-  return ["weekday", "weekend"].every(s => plan[s] && (!ACTIONS[plan[s].action].needsSong || plan[s].song));
+  return ["weekday", "weekend"].every(s => plan[s] && (!ACTIONS[plan[s].action].needsSong || plan[s].song))
+    && planCost() <= state.run.money;
 }
 
 function slotCell(slot, label) {
@@ -745,7 +777,9 @@ function openSheet(slot) {
 
   const draw = () => {
     const cards = Object.entries(ACTIONS).filter(([k]) => actionAvailable(k)).map(([k, a]) => {
-      const blocked = (a.oncePerTurn || a.oncePerRun) && other && other.action === k;
+      const otherCost = other ? ACTIONS[other.action].cost || 0 : 0;
+      const broke = (a.cost || 0) + otherCost > state.run.money;
+      const blocked = ((a.oncePerTurn || a.oncePerRun) && other && other.action === k) || broke;
       return `<button class="act-card ${pick && pick.action === k ? "selected" : ""}" data-action="${k}" ${blocked ? "disabled" : ""}>
         ${iconHtml(k, 40)}<span class="a-name">${a.label}</span><span class="a-fx">${fxText(a)}</span></button>`;
     }).join("");
@@ -791,6 +825,8 @@ function fxText(a) {
   if (a.skill) parts.push("실력" + sign(a.skill, 2));
   if (a.mastery) parts.push("숙련" + sign(a.mastery, 4));
   if (a.voice) parts.push("목" + sign(a.voice, 10));
+  if (a.weight && a.weight >= 1) parts.push("체중" + sign(a.weight, 1));
+  if (a.cost) parts.push(`<br>💰−${a.cost}만`);
   return parts.join(" ") || "대비";
 }
 
@@ -848,7 +884,7 @@ async function advanceTurn() {
         let g = f;
         let note = "";
         if (a.minigame) {
-          const m = await MiniGames.play(a.minigame, { ease: song ? ease(song) : run.skill / 100 });
+          const m = await MiniGames.play(a.minigame, { ease: clamp((song ? ease(song) : run.skill / 100) + weightZone().breathEase, 0, 1) });
           g *= m.skipped ? BALANCE.minigameSkip : 0.5 + m.ratio;
           note = m.skipped ? " (미니게임 건너뜀)" : ` (미니게임 ${r(m.ratio * 100)}점)`;
         }
@@ -859,9 +895,20 @@ async function advanceTurn() {
         log.push(`${slotName}: ${a.label}${song ? ` — ${SONGS[song].title}` : ""}${note}`);
       }
       run.voice = clamp(run.voice + a.voice);
+      if (a.cost) { run.money -= a.cost; log.push(`${slotName}: ${a.label} 비용 −${won(a.cost)}`); }
+      if (a.weight) run.weight += a.weight;
 
       await playMontage(slotName, action, song, pre);
     }
+
+    // 입시 스트레스로 체중이 빠지고, 과체중이면 숨이 차서 목이 지친다
+    run.weight -= BALANCE.weightLossPerTurn;
+    const zone = weightZone();
+    if (zone.voicePerTurn) {
+      run.voice = clamp(run.voice + zone.voicePerTurn);
+      log.push(`과체중이라 숨이 차다. 목이 쉽게 지친다.`);
+    }
+    if (weightZone(before.weight).name !== zone.name) log.push(`체중 상태가 '${zone.name}'(으)로 바뀌었다. ${zone.desc}`);
 
     if (!skillGained) {
       gainSkill(-BALANCE.skillDecay);
@@ -895,7 +942,8 @@ async function advanceTurn() {
 }
 
 function snapshot() {
-  return { skill: state.run.skill, voice: state.run.voice, mastery: { ...state.run.mastery } };
+  const run = state.run;
+  return { skill: run.skill, voice: run.voice, mastery: { ...run.mastery }, money: run.money, weight: run.weight };
 }
 
 /* 장면: 배경 전환 + 캐릭터 동작 + 숫자가 떠오름 */
@@ -913,6 +961,10 @@ async function playMontage(slotName, action, song, pre) {
   }
   const dv = r(run.voice) - r(pre.voice);
   if (dv) items.push({ text: dv > 0 ? "목 회복" : "목 −", cls: dv > 0 ? "voice" : "minus" });
+  const dw = run.weight - pre.weight;
+  if (dw > 0.05) items.push({ text: `체중 +${dw.toFixed(1)}kg`, cls: "" });
+  const dmo = run.money - pre.money;
+  if (dmo) items.push({ text: `${dmo > 0 ? "+" : "−"}${won(Math.abs(dmo))}`, cls: dmo < 0 ? "minus" : "" });
   await wait(250);
   floatNums(items);
   await wait(1150);
@@ -932,6 +984,10 @@ function diffHtml(before) {
   });
   const vl = voiceLabel(run.voice);
   items.push(`목 ${vl.icon} ${vl.text}`);
+  const dw = run.weight - (before.weight ?? run.weight);
+  const z = weightZone();
+  items.push(`체중 ${weightKg().toFixed(1)}kg ${Math.abs(dw) >= 0.05 ? `<span class="${dw > 0 ? "up" : "down"}">${dw > 0 ? "+" : ""}${dw.toFixed(1)}</span>` : ""} ${z.icon}${z.name}`);
+  items.push(`용돈 ${won(run.money)} ${d(before.money ?? run.money, run.money)}`);
   return `<div class="diff">${items.map(i => `<span>${i}</span>`).join("")}</div>`;
 }
 
@@ -959,6 +1015,8 @@ function applyEffect(e) {
   if (e.masteryBest) gainMastery(bestSong(), e.masteryBest);
   if (e.masteryRandom) gainMastery(mySongs()[Math.floor(Math.random() * mySongs().length)], e.masteryRandom);
   if (e.boost) run.boost = true;
+  if (e.weight) run.weight += e.weight;
+  if (e.money) run.money = Math.max(0, run.money + e.money);
 }
 
 /* =====================================================
@@ -976,9 +1034,10 @@ function tierFor(e) {
 function stageParams(songId, schoolSpeed = 1) {
   const e = ease(songId);
   const tier = tierFor(e);
-  let timeMult = tier.timeMult * schoolSpeed;
+  const zone = weightZone();
+  let timeMult = tier.timeMult * schoolSpeed * zone.timeMult;
   if (state.run.voice < 15) timeMult *= 0.85;
-  let hp = 3 + tier.hpBonus;
+  let hp = 3 + tier.hpBonus + zone.stageHp;
   if (state.run.accompanistTrouble) hp -= 1;
   return {
     timeMult, hp: Math.max(1, hp), typo: tier.typo,
@@ -1010,7 +1069,8 @@ function startBgm() {
 
 function finalScore(res, songId) {
   const w = BALANCE.examWeights;
-  return r(res.accuracy * w.accuracy + state.run.skill * w.skill + state.run.mastery[songId] * w.mastery);
+  const base = res.accuracy * w.accuracy + state.run.skill * w.skill + state.run.mastery[songId] * w.mastery;
+  return r(clamp(base + weightZone().score)); // 체중 상태 보정
 }
 
 function resultTable(res) {

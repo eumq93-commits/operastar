@@ -26,7 +26,8 @@ const ART = {
     lesson:   ART_DIR + "icon-lesson.png",
     theory:   ART_DIR + "icon-theory.png",
     rest:     ART_DIR + "icon-rest.png",
-    backup:   ART_DIR + "icon-backup.png"
+    backup:   ART_DIR + "icon-backup.png",
+    food:     ART_DIR + "icon-food.png"
   },
 
   // 2등신 SD 캐릭터 (64×64). 없으면 기존 무대 캐릭터 그림을 쓴다.
@@ -40,7 +41,8 @@ const ACTION_SCENE = {
   lesson: "lesson",
   theory: "room",
   rest: "room",
-  backup: "room"
+  backup: "room",
+  food: "room"
 };
 
 /* ---------- 있는 그림만 쓰기 ----------

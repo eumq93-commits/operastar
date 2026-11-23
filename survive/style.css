@@ -783,3 +783,10 @@ img { image-rendering: pixelated; }
 /* 교복 2등신 캐릭터가 무대에 설 때 */
 .stage-screen .singer-anchor.sd { width: 12%; top: 49%; left: 41%; }
 .stage-screen .singer-anchor.sd .singer-image { filter: drop-shadow(0 6px 4px rgba(0, 0, 0, .45)); }
+
+/* 체중 · 용돈 */
+.weight-face { display: inline-flex; align-items: center; gap: 4px; padding: 2px 8px; font-weight: 700; color: var(--ink); background: #bfe6a0; box-shadow: 0 0 0 2px var(--ink); }
+.weight-face.thin { background: var(--pink); }
+.weight-face.good { background: var(--mint); }
+.weight-face.heavy { background: var(--gold); }
+.money { margin-left: auto; padding: 2px 8px; font-weight: 700; background: var(--paper); box-shadow: 0 0 0 2px var(--ink); }

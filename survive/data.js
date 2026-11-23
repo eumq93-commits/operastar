@@ -17,8 +17,30 @@ const BALANCE = {
   // 최종 실기 점수 = 정확도×50 + 실력×0.3 + 곡 숙련도×0.2  (최대 100)
   // → 타자만 잘 쳐서는 못 붙는다. 1회차엔 상위권이 거의 불가능, 회귀로 쌓아야 한다.
   examWeights: { accuracy: 50, skill: 0.3, mastery: 0.2 },
-  minigameSkip: 0.7        // 미니게임을 건너뛰면 효과 70%
+  minigameSkip: 0.7,       // 미니게임을 건너뛰면 효과 70%
+
+  // 용돈 (단위: 만원) — 매달 상순에 들어온다
+  allowance: 30,
+  startMoney: 0,
+
+  // 체중 (기준 체중에서 얼마나 늘었나, kg)
+  baseWeight: { female: 52, male: 66 },
+  weightLossPerTurn: 0.8   // 입시 스트레스로 2주마다 저절로 빠지는 양
 };
+
+/* 체중 구간: 기준 체중 대비 (kg)
+   stageHp: 무대 HP 보정, timeMult: 낙하 시간 배율, score: 실기 점수 보정,
+   voicePerTurn: 2주마다 목 변화, breathEase: 호흡 훈련 난이도 보정          */
+const WEIGHT_ZONES = [
+  { max: -3, name: "마름",   icon: "🥢", cls: "thin",  stageHp: -1, timeMult: 0.9, score: -3, voicePerTurn: 0,  breathEase: -0.15,
+    desc: "호흡이 짧아 소리가 가볍다. 무대 HP −1, 실기 점수 −3" },
+  { max: 1,  name: "보통",   icon: "🙂", cls: "ok",    stageHp: 0,  timeMult: 1,   score: 0,  voicePerTurn: 0,  breathEase: 0,
+    desc: "평범한 몸 상태" },
+  { max: 5,  name: "든든",   icon: "💪", cls: "good",  stageHp: 1,  timeMult: 1,   score: 3,  voicePerTurn: 0,  breathEase: 0.1,
+    desc: "소리가 울린다! 무대 HP +1, 실기 점수 +3" },
+  { max: 99, name: "과체중", icon: "😵", cls: "heavy", stageHp: 0,  timeMult: 0.95, score: -2, voicePerTurn: -6, breathEase: -0.05,
+    desc: "숨이 차고 목이 쉽게 지친다. 2주마다 목 −, 실기 점수 −2" }
+];
 
 /* ---------- 무대 여유도 (연습량 = 실력·숙련도에 따라) ----------
    ease = 실력/2 + 숙련도/2 (0~1)
@@ -202,19 +224,21 @@ const ACTIONS = {
               desc: "호흡 훈련 미니게임. 고른 곡의 숙련도 ++, 실력 +, 목 −" },
   stage:    { label: "실전 연습",   icon: "🎤", needsSong: true,  skill: 0,   mastery: 0,  voice: -10,
               desc: "직접 무대를 치른다. 잘할수록 숙련도·실력이 크게 오른다. 목 −" },
-  lesson:   { label: "입시 레슨",   icon: "👩‍🏫", needsSong: true,  skill: 3,   mastery: 4,  voice: -8, oncePerTurn: true,
-              desc: "실력 ++, 숙련도 +, 목 − (한 턴에 한 번)" },
+  lesson:   { label: "입시 레슨",   icon: "👩‍🏫", needsSong: true,  skill: 3,   mastery: 4,  voice: -8, oncePerTurn: true, cost: 8,
+              desc: "실력 ++, 숙련도 +, 목 − (한 턴에 한 번, 레슨비 8만원)" },
   theory:   { label: "청음·시창",   icon: "📖", needsSong: false, skill: 2,   mastery: 0,  voice: 0, minigame: "solfege",
               desc: "선율 따라 부르기 미니게임. 목을 쓰지 않고 실력 +" },
-  rest:     { label: "휴식",       icon: "🛌", needsSong: false, skill: -1,  mastery: 0,  voice: 30,
+  rest:     { label: "휴식",       icon: "🛌", needsSong: false, skill: -1,  mastery: 0,  voice: 30, weight: 0.3,
               desc: "목 +++, 실력 −" },
+  food:     { label: "영양보충",   icon: "🍖", needsSong: false, skill: 0,   mastery: 0,  voice: 5,  weight: 2.2, cost: 4,
+              desc: "삼겹살·국밥으로 든든하게! 체중 ++, 목 + (4만원)" },
   backup:   { label: "예비 반주자 섭외", icon: "🎹", needsSong: false, skill: 0, mastery: 0, voice: 0, oncePerRun: true,
               requiresInfo: "accompanist",
               desc: "12월 하순 반주 선생님 연락 두절에 대비한다 (미래 정보)" }
 };
 
 /* ---------- 랜덤 이벤트 ----------
-   effect: { skill, voice, masteryBest, masteryRandom, boost }
+   effect: { skill, voice, masteryBest, masteryRandom, boost, weight, money }
    boost: 다음 턴 연습 효과 +50%                                       */
 const RANDOM_EVENTS = [
   { id: "karaoke", text: "친구들이 수행평가 끝났다고 노래방에 가자고 한다.",
@@ -234,6 +258,14 @@ const RANDOM_EVENTS = [
     ] },
   { id: "dust", text: "황사가 심한 주간이다. 목이 칼칼하다.", effect: { voice: -12 } },
   { id: "doraji", text: "엄마가 도라지청을 사 오셨다.", effect: { voice: 20 } },
+  { id: "boyang", text: "엄마가 \"고3은 잘 먹어야 한다\"며 보양식을 해 주셨다.", effect: { weight: 2, voice: 5 } },
+  { id: "noappetite", text: "모의고사 스트레스로 입맛이 뚝 떨어졌다.", effect: { weight: -1.5 } },
+  { id: "pocket", text: "명절에 친척 어른들께 용돈을 받았다.", effect: { money: 15 } },
+  { id: "chicken", text: "친구들이 치킨을 먹자고 한다. (5만원)",
+    choices: [
+      { label: "먹는다", result: "든든하게 먹었다.", effect: { weight: 1.5, money: -5 } },
+      { label: "참는다", result: "지갑을 지켰다.", effect: {} }
+    ] },
   { id: "mocktest", text: "학교 모의고사 기간이라 연습실에 거의 못 갔다.", effect: { skill: -2 } },
   { id: "praise", text: "레슨 선생님이 \"요즘 소리가 좋아졌다\"고 칭찬하셨다.", effect: { skill: 3 } },
   { id: "youtube", text: "명연주 영상을 보다가 새벽 3시가 됐다.", effect: { voice: -8, masteryRandom: 4 } }
@@ -251,6 +283,8 @@ const TUTORIAL = {
     "'실전 연습'은 직접 오페라타입 무대를 치르는 거야. 잘 부를수록 숙련도가 확 오르지.",
     "숙련도가 높은 곡은 무대에서 가사가 천천히 떨어지고, 목숨(HP)도 넉넉해져.",
     "진행은 턴마다 자동 저장돼. 브라우저 기록을 지우면 사라질 수 있으니 가끔 '저장 파일 내보내기'도 해 둬.",
+    "용돈은 매달 초에 들어와. 레슨비랑 영양보충에 쓰는 돈이니까 아껴 써.",
+    "그리고 잘 먹어! 입시 스트레스로 살이 빠지면 호흡이 짧아지고 소리가 가벼워져. 든든해야 소리가 울려. 그렇다고 너무 찌면 숨이 차니까 적당히.",
     "다음 턴엔 모의 실기가 있어. 망쳐도 괜찮은 연습 무대니까 부담 갖지 마."
   ]
 };
