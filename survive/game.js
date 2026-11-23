@@ -321,11 +321,24 @@ async function teacherSays(lines) {
   }
 }
 
+/* 무대 캐릭터: 연습 무대는 교복 2등신, 실제 입시 실기는 무대 의상 */
+function stageImages(outfit) {
+  const v = state.voiceType;
+  const sdVoice = VOICE_TYPES[v].sdFrom || v;
+  if (outfit === "uniform" && artAvailable(ART.sd(sdVoice, "idle"))) {
+    const sd = pose => artAvailable(ART.sd(sdVoice, pose)) ? ART.sd(sdVoice, pose) : ART.sd(sdVoice, "idle");
+    return { images: { normal: sd("idle"), perfect: sd("sing"), good: sd("sing"), pass: sd("idle"), miss: sd("sick") }, sd: true };
+  }
+  return { images: VOICE_TYPES[v].images, sd: false };
+}
+
 function playStage(options) {
   bgmSong = null; // 무대가 끝나면 배경음악을 다시 튼다
+  const look = stageImages(options.outfit || "stage");
   return new Promise(resolve => {
     Stage.play(Object.assign({}, options, {
-      images: VOICE_TYPES[state.voiceType].images,
+      images: look.images,
+      sd: look.sd,
       onEnd: resolve
     }));
   });
@@ -509,7 +522,7 @@ async function mockExam() {
   const songId = mySongs()[c];
   const p = stageParams(songId, 1);
   const res = await playStage({
-    song: SONGS[songId], label: `모의 실기 · ${SONGS[songId].title}`,
+    song: SONGS[songId], label: `모의 실기 · ${SONGS[songId].title}`, outfit: "uniform",
     ...stageOpts(songId, p), endTime: SONGS[songId].practiceEnd, allowQuit: true
   });
   const score = finalScore(res, songId);
@@ -824,7 +837,7 @@ async function advanceTurn() {
       if (action === "stage") {
         const p = stageParams(song, 1.1);
         const res = await playStage({
-          song: SONGS[song], label: `실전 연습 · ${SONGS[song].title}`,
+          song: SONGS[song], label: `실전 연습 · ${SONGS[song].title}`, outfit: "uniform",
           ...stageOpts(song, p), endTime: SONGS[song].practiceEnd, allowQuit: true
         });
         gainMastery(song, (4 + res.accuracy * 16) * f);

@@ -50,7 +50,7 @@ const Stage = (() => {
     ["stageScreen", "stageArt", "gameStage", "fallingLayer", "missLine", "typingInput",
      "submitBtn", "hpValue", "scoreValue", "comboValue", "judgementLayer", "judgementMain",
      "judgementSub", "phaseLayer", "phaseText", "musicProgress", "singerMotion", "singerImage",
-     "singerBubble", "singerBubbleText", "stageMusic", "stageLabel", "quitStageBtn", "lyricPreview", "tierBadge"]
+     "singerBubble", "singerBubbleText", "singerAnchor", "stageMusic", "stageLabel", "quitStageBtn", "lyricPreview", "tierBadge"]
       .forEach(id => { el[id] = $(id); });
 
     Object.entries(SFX_FILES).forEach(([k, src]) => {
@@ -377,6 +377,7 @@ const Stage = (() => {
     previewCache = "x";
 
     el.stageLabel.textContent = opts.label || opts.song.title;
+    el.singerAnchor.classList.toggle("sd", !!opts.sd); // 교복 2등신 캐릭터는 크기·위치를 따로
     el.tierBadge.hidden = !opts.tierName;
     el.tierBadge.textContent = opts.tierName ? `여유도 · ${opts.tierName}` : "";
     el.tierBadge.className = "tier-badge tier-" + (opts.tierName || "");

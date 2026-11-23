@@ -779,3 +779,7 @@ img { image-rendering: pixelated; }
 .voice-card .borrow { font-family: "Galmuri9", var(--font); font-size: 9px; margin-top: 3px; opacity: .75; }
 .field { white-space: nowrap; }
 .field input { min-width: 0; width: 100%; }
+
+/* 교복 2등신 캐릭터가 무대에 설 때 */
+.stage-screen .singer-anchor.sd { width: 12%; top: 49%; left: 41%; }
+.stage-screen .singer-anchor.sd .singer-image { filter: drop-shadow(0 6px 4px rgba(0, 0, 0, .45)); }
