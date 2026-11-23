@@ -89,6 +89,23 @@ SONG_LIST = [
          voices=["tenor", "baritone"], limit=110, tempo=1.0),
 
     # ---- OpenScore Lieder (MusicXML) ----
+    # ---- 직접 받은 악보 (tools/scores/, MusicXML) ----
+    dict(id="nelcor", file="nelcor.mxl", source="사용자 제공 악보",
+         title="Nel cor più non mi sento", ko="넬 꼬르 삐우 논 미 쎈또 · 파이지엘로", level="입시",
+         voices=["soprano", "mezzo", "tenor", "baritone", "bass"], limit=110, tempo=1.0),
+    dict(id="lungidal", file="lungidal.mxl", source="사용자 제공 악보",
+         title="Lungi dal caro bene", ko="룬지 달 까로 베네 · 사르티", level="입시",
+         voices=["soprano", "mezzo", "tenor", "baritone", "bass"], limit=110, tempo=1.0),
+    dict(id="vaghissima", hand="vaghissima", source="사용자 제공 PDF를 손으로 옮김",
+         title="Vaghissima sembianza", ko="바기씨마 쎔비안짜 · 도나우디", level="입시",
+         voices=["soprano", "mezzo", "tenor", "baritone", "bass"], limit=160, tempo=1.0),
+    dict(id="derkuss", file="derkuss.mxl", source="사용자 제공 악보", lang="de",
+         title="Der Kuss", ko="데어 쿠스 · 베토벤", level="대학2",
+         voices=["soprano", "mezzo", "tenor", "baritone", "bass"], limit=110, tempo=1.0),
+    dict(id="diepost", file="diepost.mxl", source="사용자 제공 악보", lang="de",
+         title="Die Post (Winterreise)", ko="디 포스트 · 슈베르트", level="대학2",
+         voices=["tenor", "baritone", "bass"], limit=110, tempo=1.0),
+
     dict(id="spiratepur", mxl="Donaudy,_Stefano/36_Arie_di_Stile_Antico/10_Spirate_pur,_spirate/lc29420288.mxl",
          title="Spirate pur, spirate", ko="스삐라떼 뿌르 스삐라떼 · 도나우디", level="입시",
          voices=["soprano", "mezzo", "tenor", "baritone", "bass"], limit=110, tempo=1.0),
@@ -552,7 +569,15 @@ def pack(notes, limit):
 
 
 def build(song):
-    if song.get("mxl"):
+    if song.get("hand"):  # 악보를 보고 손으로 옮긴 곡 (tools/scores/<이름>.py)
+        import importlib.util
+        spec = importlib.util.spec_from_file_location(song["hand"], os.path.join(ROOT, "tools", "scores", song["hand"] + ".py"))
+        mod = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(mod)
+        tracks = mod.build_tracks()
+    elif song.get("file"):  # 직접 받은 악보 (tools/scores/)
+        tracks = read_mxl(os.path.join(ROOT, "tools", "scores", song["file"]), song.get("tempo", 1.0))
+    elif song.get("mxl"):
         tracks = read_mxl(os.path.join(OPENSCORE, "scores", song["mxl"]), song.get("tempo", 1.0))
     else:
         ly = os.path.join(MUTOPIA, "ftp", song["path"])
@@ -571,12 +596,14 @@ def build(song):
     # 마지막 가사 뒤 몇 초까지만
     end = min(limit, lines[-1]["time"] + 6)
     for ln in lines:
-        ln["text"] = it_line(ln["orig"])
+        # 한글 발음은 이탈리아어만 자동. 다른 언어는 우선 원어 그대로 (발음 규칙 추가 예정)
+        ln["text"] = it_line(ln["orig"]) if song.get("lang", "it") == "it" else ln["orig"]
     first = voice["notes"][0][0]
     pitches = [p for _, _, p in voice["notes"]]
     data = dict(
         id=song["id"], title=song["title"], ko=song["ko"], level=song["level"],
-        voices=song["voices"], source="Mutopia Project (public domain)",
+        voices=song["voices"], lang=song.get("lang", "it"),
+        source=song.get("source", "Mutopia Project (public domain)"),
         duration=round(end, 2), practiceEnd=round(min(end, lines[min(len(lines) - 1, 7)]["time"] + 4), 2),
         melodyRange=[min(pitches), max(pitches)],
         lyrics=lines,
@@ -601,7 +628,7 @@ def main():
     for song in SONG_LIST:
         if want and song["id"] not in want:
             continue
-        print(f"▶ {song['id']}  ({song.get('path') or song.get('mxl')})")
+        print(f"▶ {song['id']}  ({song.get('path') or song.get('mxl') or song.get('file') or song.get('hand')})")
         try:
             d = build(song)
         except Exception as e:  # noqa: BLE001
